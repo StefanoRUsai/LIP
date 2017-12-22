@@ -1,2 +1,0 @@
-# LIP
-Progetto Lip
