@@ -6,6 +6,8 @@
 (************************************************************)
 
 (* "tipo valutazione dell'esprezzione" *)
+(* il tipo evn è da rivedere / chiedere al professore*)
+
 type eval =
   Undefined
 | Int of int
@@ -19,17 +21,21 @@ and
 
   
 exception UndefinedIde of ide;;
-exception TypeMismatch of string;;
 
-let emptyenv = fun()-> Env(fun x -> Undefined);;
 
-(* da capire perchè non vede direttamente x come IDE*)
+let emptyenv = fun() -> Env(fun x -> Undefined)
 
-let bind ((Env r), (Ide x),d) = Env (fun y -> if y=x then d else r y);; 
+and bind ((Env r), (Ide x), d) = Env (fun y -> if y=x then d else r y)
 
-let applyenv (r,x) = match r x with
-  Undefined -> raise (UndefinedIde x)
-| _ as d -> d ;;
+and applyenv ((Env r),(Ide x)) = match r x with
+  Undefined -> raise (UndefinedIde (Ide x))
+| _ as d -> d
+
+
+
+
+
+
 
 let typechecker (x, y) = match x with
     | "int" -> (match y with 
