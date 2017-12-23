@@ -1,6 +1,7 @@
 (* Progetto gruppo con identificativo g03*)
-(*#use eval###.ml;;*)
+(*#use evalg03.ml;;*)
 (*Tipi exp, espressioni di dati astratti  eterogeni*)
+
 type exp =
   Val of ide                     (*Valore *)
 | Eint of int                    (*espressione intero*)
@@ -30,6 +31,7 @@ type exp =
 and 
 ide = Ide of string;;
 
+
 type etype =
   TBool
 | TInt
@@ -41,17 +43,28 @@ type etype =
 
 
 
+(* puntatore per nuova variabile con reference*)
+let nextsym = ref (-1);;
 
-(*Environment/Ambiente *)
+(* creazione nuova variabile tramite il sistema puntatore*)
+
+let newvar = fun () -> nextsym := !nextsym + 1 ;
+  TVar ("?T" ^ string_of_int (!nextsym));;
+
+
+
+(* vincoli, ci si prova*)
+
+
+
+let rec vinc t = match t with
+   Eint(n)->(TInt,[])
+  |True->(TBool,[])
+  |False->(TBool,[])
+  |Sum(t1,t2)->(TInt, ([(t1,TInt)]@[(t2,TInt)]@(snd(vinc t1))@(snd(vinc t2))@[]))
+  |Diff(t1,t2)->(TInt, ([(t1,TInt)]@[(t2,TInt)]@(snd(vinc t1))@(snd(vinc t2))@[]))
+  |Times(t1,t2)->(TInt, ([(t1,TInt)]@[(t2,TInt)]@(snd(vinc t1))@(snd(vinc t2))@[]))
+  |And(t1,t2)->(TBool, ([(t1,TInt)]@[(t2,TInt)]@(snd(vinc t1))@(snd(vinc t2))@[]))
+  |Or(t1,t2)->(TBool, ([(t1,TInt)]@[(t2,TInt)]@(snd(vinc t1))@(snd(vinc t2))@[]))
   
-exception UndefinedIde of ide;;
-exception TypeMismatch of string;;
-
-let emptyenv = fun()-> Env(fun x -> Undefined);;
-
-(* da capire perchè non vede direttamente x come IDE*)
-let bind ((Env r), (Ide x),d) = Env (fun y -> if y=x then d else r y);; 
-
-let applyenv (r,x) = match r x with
-  Undefined -> raise (UndefinedIde x)
-| _ as d -> d ;;
+  |_-> failwith "errore";;
