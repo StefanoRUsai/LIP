@@ -103,17 +103,25 @@ let rec  tconst e tr = match e with
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2,t2)] in
      (TList [t1],c@c1@c2)  
+  |Head (Cons (e1,e2)) -> 
+     let (t1, c1) = tconst e1 tr in
+     let c = [(t1, (TList [t1]))] in
+     (t1, c@c1)
+  |Tail (Cons (e1,e2)) -> 
+     let (t1, c1) = tconst e2 tr in
+     let c = [(TList [t1], t1)] in
+     (t1, c@c1)
   |Pair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
    (TPair(t1,t2), c@c1@c2)
-  |Fst Pair (e1,e2) -> 
+  |Fst (Pair (e1,e2)) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in    
      let c = [(t1, (TPair (t1,t2)))] in
      (t1, c@c1)
-  |Snd Pair (e1,e2) -> 
+  |Snd (Pair (e1,e2)) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in    
      let c = [(t2, (TPair (t1,t2)))] in
@@ -153,7 +161,8 @@ let rec subst_app t0 i t = match t0 with
   | TFun (t1,t2) -> TFun (subst_app t1 i t, subst_app t2 i t)
   | TPair (t1,t2) ->TPair (subst_app t1 i t, subst_app t2 i t)
   | TList l -> if l = [TVar i] then TList [t] else TList l
-  ;;
+
+;;
 
 let rec subst l i t = match l with
     [] -> []
@@ -274,7 +283,18 @@ typeinf n;;
 
 
 let a = Empty;;
+tconst a newtypenv;;
+
 typeinf a;;
 
 let a = Cons (Eint 2, Empty);;
 typeinf a;;
+
+let a = Head (Cons (Eint 2, Empty));;
+let b = Tail (Cons (Eint 2, Cons (Eint 2, Empty)));;
+
+tconst a newtypenv;;
+tconst b newtypenv;;
+
+
+typeinf b;;
