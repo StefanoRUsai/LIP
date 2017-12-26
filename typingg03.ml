@@ -98,11 +98,11 @@ let rec  tconst e tr = match e with
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TInt); (t2,TInt)] in
     (TBool, c @ c1 @ c2)
-  |Cons (e1,e2) -> 
+  |Cons (e1,e2) ->
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
-     let c = [(t1, t1); (t2, (TList [t1]) )] in
-     (TList [], c@c1@[TList[t1], t2])     
+     let c = [(t1, t1); (t2,t2)] in
+     (TList [t1],c@c1@c2)  
   |Pair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
@@ -165,7 +165,7 @@ let rec occurs name typ = match typ with
 | TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
 | TFun (t1,t2) -> (occurs name t1) || (occurs name t2)
 | TList [TVar l] -> name=l
-|_-> failwith " occorrenza"
+|_-> failwith " verifica"
 ;;
 
  
@@ -174,14 +174,15 @@ let rec unify  l = match l with
   |(TInt,TInt)::tl -> unify tl
   |(TBool,TBool)::tl -> unify tl
   |(TVar x, t)::tl ->
-    if occurs x t then failwith "Controllo occorrenze"
+    if occurs x t then failwith "Controllo verifica"
     else (TVar x,t)::(unify (subst tl x t))
   |(t, TVar x)::tl ->
-    if occurs x t then failwith "Controllo occorrenze"
+    if occurs x t then failwith "Controllo verifica"
     else (TVar x,t)::(unify (subst tl x t))
   |(TFun(t1,t2),TFun(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
   |(TPair(t1,t2),TPair(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
-  |(t1,TPair(t11,t22))::tl -> if t1 = t11 then unify ((t1,t11) :: tl)                          else unify ((t1,t22) :: tl)  
+  |(t1,TPair(t11,t22))::tl -> if t1 = t11 then unify ((t1,t11) :: tl) else unify ((t1,t22) :: tl)
+                            
   | _ -> failwith "Non esiste il vincolo";; 
 
 
@@ -263,3 +264,17 @@ tconst n newtypenv;;
 tconst (Eint 4) newtypenv;;
 
 
+let a = Cons (Eint 2,Empty);;
+
+tconst a newtypenv;;
+
+
+let n = Eint 3;;
+typeinf n;;
+
+
+let a = Empty;;
+typeinf a;;
+
+let a = Cons (Eint 2, Empty);;
+typeinf a;;

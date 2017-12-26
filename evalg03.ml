@@ -45,7 +45,13 @@ and evalBool e r = match sem e r with
 and evalChar e r = match sem e r with
   Char c -> c
 | _ -> raise TypeMismatch
+
      
+and evalList e r = match sem e r with
+  List c -> c
+| _ -> raise TypeMismatch
+     
+
 
 and sem e r = match e with
   Eint n -> Int n
@@ -74,6 +80,8 @@ and sem e r = match e with
 | Not ne -> Bool (not (evalBool ne r))
 | And (e1,e2) -> Bool (evalBool e1 r && evalBool e2 r)
 | Or (e1,e2) -> Bool (evalBool e1 r || evalBool e2 r)
+|Empty -> List []
+|Cons (e1, Tail e2) -> List (e1::e2)        
 | Ifthenelse(e0,e1,e2) -> if evalBool e0 r then sem e1 r else sem e2 r
 | Let (x,e1,e2) -> sem e2 (bind (r,x,(sem e1 r)))
 (*| Rec (x,e1,e2) -> let rec r1 = Env(fun y -> applyenv (bind (r1, x, (sem e1 r1))) y) in sem e2 r1;;
