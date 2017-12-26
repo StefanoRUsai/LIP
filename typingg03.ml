@@ -42,7 +42,6 @@ type etype =
 | TList of etype list
 | TFun of etype * etype;;
 
-
 (* USARE I PUNTATORI IN OCAML*)
 (* puntatore per nuova variabile con reference*)
 let nextsym = ref (-1);;
@@ -72,16 +71,14 @@ let bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =(i,t)::e;;
 
 let rec  tconst e tr = match e with
     Eint n ->(TInt,[])
-  | Val  x -> (applytypenv tr x, [])
-  | Sum   (e1,e2)
-  | Diff  (e1,e2)
-  | Times (e1,e2) ->
+  | Val x -> (applytypenv tr x, [])
+  | Sum   (e1,e2)| Diff  (e1,e2) | Times (e1,e2) ->
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TInt); (t2,TInt)] in
     (TInt, c @ c1 @ c2)
   |True | False -> (TBool, [])
-  |Empty -> (TList [],[])
+  |Empty -> (TList [newvar()] ,[])
   |And (e1,e2)|Or (e1,e2) -> 
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
@@ -89,8 +86,7 @@ let rec  tconst e tr = match e with
     (TBool, c @ c1 @ c2)
   |Not e1 ->
     let (t1,c1) = tconst e1 tr in
-    let c = [(t1,TBool)] in
-    (TBool, c @ c1)
+    (TBool, c1)
   | Eq (e1,e2)->      
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
@@ -105,8 +101,8 @@ let rec  tconst e tr = match e with
   |Cons (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
-     let c = [(t1, t1); (t2, (TList []) )] in
-     (TList [], c@c1@c2)     
+     let c = [(t1, t1); (t2, (TList [t1]) )] in
+     (TList [], c@c1@[TList[t1], t2])     
   |Pair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
@@ -156,7 +152,8 @@ let rec subst_app t0 i t = match t0 with
   | TVar y -> if y=i then t else TVar y
   | TFun (t1,t2) -> TFun (subst_app t1 i t, subst_app t2 i t)
   | TPair (t1,t2) ->TPair (subst_app t1 i t, subst_app t2 i t)
-  |_-> failwith "sostituzione ";;
+  | TList l -> if l = [TVar i] then TList [t] else TList l
+  ;;
 
 let rec subst l i t = match l with
     [] -> []
@@ -167,10 +164,10 @@ let rec occurs name typ = match typ with
 | TVar n1 -> n1=name
 | TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
 | TFun (t1,t2) -> (occurs name t1) || (occurs name t2)
-|_-> failwith " occorrenza lista"
+| TList [TVar l] -> name=l
+|_-> failwith " occorrenza"
 ;;
 
-(*| TList n -> false servirà?????*)
  
 let rec unify  l = match l with
   [] -> []
@@ -189,7 +186,7 @@ let rec unify  l = match l with
 
 
 
-let rec type_inference e =
+let rec typeinf e =
   let rec resolve t s = (match s with
     [] -> t
   | (TVar x, t1)::s1 -> resolve (subst_app t x t1) s1
@@ -204,7 +201,7 @@ let s = Let(Ide "prova",
 
 let (t0, c0) = tconst s newtypenv;;
 
-type_inference s;;
+typeinf s;;
 
 
 let a = Fst (Pair ( Eint 2, Eint 5));;
@@ -223,3 +220,46 @@ let a = Eq (Eint 2, Eint 3);;
 
 let (t0, c0) = tconst a newtypenv;;
 type_inference a;;
+
+let a = Empty;;
+
+tconst a newtypenv;;
+
+[newvar()];;
+TInt;;
+TList [newvar()];;
+
+
+let a = Not (True);;
+
+type_inference a;;
+
+
+let f = Empty;;
+let (t0,c0) = tconst f newtypenv;;
+type_inference f;;
+
+let l = Sum( Eint 2 , Eint 3);;
+
+let (t0,c0) = tconst l newtypenv;;
+type_inference l;;
+
+
+let lista = Cons (Eint 2, Empty);;
+let (t0,c0) = tconst lista newtypenv;;
+
+let lista = Cons (Eint 2, Empty);;
+let lista2 = Cons (Eint 2, lista);;
+let (t0,c0) = tconst lista2 newtypenv;;
+typeinf lista;;
+type_inference (Eint 4);;
+
+
+let n = Eint 3;;
+
+tconst n newtypenv;;
+
+
+tconst (Eint 4) newtypenv;;
+
+
