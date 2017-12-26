@@ -62,6 +62,7 @@ let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e,i with
   
 
 (*associa un tipo e un identificatore all'ambiente dei tipi*)
+
 let bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =(i,t)::e;; 
 
 
@@ -93,7 +94,8 @@ let rec  tconst e tr = match e with
   | Eq (e1,e2)->      
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
-    let c = [(t1,t1); (t2,t2)] in
+    let c = if t1 = t2 then [(t1,t1); (t2,t2)] else
+    failwith "puoi equiparare solo lo stesso tipo" in
     (TBool, c @ c1 @ c2)  
   |Less (e1,e2) ->
     let (t1,c1) = tconst e1 tr in
@@ -104,16 +106,22 @@ let rec  tconst e tr = match e with
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, (TList []) )] in
-     (TList [], c@c1@c2)
-  |Fst e -> 
-     let (t1, c1) = tconst e tr in
-     let c = [(t1, t1); (t2, t2 )] in
-   (TPair(t1,t2), c@c1)   
+     (TList [], c@c1@c2)     
   |Pair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
    (TPair(t1,t2), c@c1@c2)
+  |Fst Pair (e1,e2) -> 
+     let (t1, c1) = tconst e1 tr in
+     let (t2, c2) = tconst e2 tr in    
+     let c = [(t1, (TPair (t1,t2)))] in
+     (t1, c@c1)
+  |Snd Pair (e1,e2) -> 
+     let (t1, c1) = tconst e1 tr in
+     let (t2, c2) = tconst e2 tr in    
+     let c = [(t2, (TPair (t1,t2)))] in
+   (t2, c@c2)
   |Ifthenelse (e0,e1,e2) ->
     let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
@@ -134,15 +142,13 @@ let rec  tconst e tr = match e with
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TFun(t2,tx))] in
     (tx, c @ c1 @ c2)    
- | Rec (x,e1) ->
+ | Rec (x,e1) -> (* da sistemare*)
     let tx = newvar() in
     let (t1,c1) = tconst e1 (bindtyp tr x tx) in
     let c = [(tx,t1)] in
      (t1, c @ c1 )
 
 |_-> failwith "errore";;
-
-
 
 let rec subst_app t0 i t = match t0 with
     TInt -> TInt
@@ -156,7 +162,7 @@ let rec subst l i t = match l with
     [] -> []
   | (t1,t2)::tl -> (subst_app t1 i t, subst_app t2 i t)::(subst tl i t)
 
-let rec occurs name tipo = match tipo with
+let rec occurs name typ = match typ with
   TInt | TBool -> false
 | TVar n1 -> n1=name
 | TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
@@ -164,21 +170,22 @@ let rec occurs name tipo = match tipo with
 |_-> failwith " occorrenza lista"
 ;;
 
-*(| TList n -> false*)
+(*| TList n -> false servirà?????*)
  
 let rec unify  l = match l with
   [] -> []
-| (TInt,TInt)::tl -> unify tl
-| (TBool,TBool)::tl -> unify tl
-| (TVar x, t)::tl ->
+  |(TInt,TInt)::tl -> unify tl
+  |(TBool,TBool)::tl -> unify tl
+  |(TVar x, t)::tl ->
     if occurs x t then failwith "Controllo occorrenze"
     else (TVar x,t)::(unify (subst tl x t))
-| (t, TVar x)::tl ->
+  |(t, TVar x)::tl ->
     if occurs x t then failwith "Controllo occorrenze"
     else (TVar x,t)::(unify (subst tl x t))
-| (TFun(t1,t2),TFun(t11,t22))::tl ->
-    unify ((t1,t11) :: (t2,t22) :: tl)
-| _ -> failwith "Non esiste il vincolo";; 
+  |(TFun(t1,t2),TFun(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
+  |(TPair(t1,t2),TPair(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
+  |(t1,TPair(t11,t22))::tl -> if t1 = t11 then unify ((t1,t11) :: tl)                          else unify ((t1,t22) :: tl)  
+  | _ -> failwith "Non esiste il vincolo";; 
 
 
 
@@ -191,37 +198,28 @@ let rec type_inference e =
   resolve t (unify c)
 ;;
 
+let s = Let(Ide "prova",
+	     Fun(Ide "x", Sum(Val(Ide "x"), Fst (Pair (Eint 8, Eint 5)))),
+	     Appl(Val(Ide "prova"),Eint 8));;
+
+let (t0, c0) = tconst s newtypenv;;
+
+type_inference s;;
 
 
-let e0 = Eint 8;;
-type_inference e0;;
-
-
-let e0 = (Eq(Eint 8, True));;
-
-let (t0,c0) = tconst e0 newtypenv;;
-
-unify c0;;
-
-type_inference e0;;
-
-let e1 = Let(Ide "succ",
-	     Fun(Ide "x", Sum(Val(Ide "x"), Eint 1)),
-	     Appl(Val(Ide "succ"),Eint 8));;
-
-
-let (t0,c0) = tconst e1 newtypenv;;
-
-unify c0;;
-type_inference e1;;
-
-let a = Pair (Eint 8, True);;
-
-type_inference a;;
+let a = Fst (Pair ( Eint 2, Eint 5));;
 
 let (t0, c0) = tconst a newtypenv;;
 
-unify c0;;
+type_inference a;;
 
-let c = Fst (Pair (Eint 6, Eint 7));;
-type_inference c;;
+let b = Snd (Pair ( Eint 2, True));;
+
+let (t0, c0) = tconst b newtypenv;;
+
+type_inference b;;
+
+let a = Eq (Eint 2, Eint 3);;
+
+let (t0, c0) = tconst a newtypenv;;
+type_inference a;;
