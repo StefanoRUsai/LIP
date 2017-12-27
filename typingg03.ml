@@ -181,7 +181,9 @@ let rec occurs name typ = match typ with
 let rec unify  l = match l with
   [] -> []
   |(TInt,TInt)::tl -> unify tl
+  |(TInt, TList a)::tl -> unify tl                   
   |(TBool,TBool)::tl -> unify tl
+  |(TBool, TList a)::tl -> unify tl                   
   |(TVar x, t)::tl ->
     if occurs x t then failwith "Controllo verifica"
     else (TVar x,t)::(unify (subst tl x t))
@@ -191,7 +193,7 @@ let rec unify  l = match l with
   |(TFun(t1,t2),TFun(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
   |(TPair(t1,t2),TPair(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
   |(t1,TPair(t11,t22))::tl -> if t1 = t11 then unify ((t1,t11) :: tl) else unify ((t1,t22) :: tl)
-                            
+  | (TList a, TList b)::tl -> unify tl 
   | _ -> failwith "Non esiste il vincolo";; 
 
 
@@ -295,6 +297,5 @@ let b = Tail (Cons (Eint 2, Cons (Eint 2, Empty)));;
 
 tconst a newtypenv;;
 tconst b newtypenv;;
-
 
 typeinf b;;
