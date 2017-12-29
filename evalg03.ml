@@ -120,7 +120,7 @@ and sem e r = match e with
                                 | Bool a, Bool b -> (Bool a)::l
                                 | Char a, Char b -> (Char a)::l)
                    |_ -> raise TypeMismatch
-                   in  List b );;
+                   in  List b )
 |Epair (e1,e2) -> Pair ( sem e1 r, sem e2 r)
 |Fst e -> ( match (sem e r) with
            Pair (a, b) -> a)
