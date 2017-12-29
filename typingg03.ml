@@ -101,31 +101,34 @@ let rec  tconst e tr = match e with
   |Cons (e1,e2) ->
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
-     let c = [(t1, t1); (t2,t2)] in
-     (TList [t1],c@c1@c2)  
-  |Head (Cons (e1,e2)) -> 
+     let c = [ (t1,t1) ; (t2, TList [t1]) ] in
+       (TList [t1],c@c1@c2)  
+  |Head e1 -> 
      let (t1, c1) = tconst e1 tr in
-     let c = [(t1, (TList [t1]))] in
+     let c = [((TList [t1]), (TList [t1]))] in
      (t1, c@c1)
-  |Tail (Cons (e1,e2)) -> 
-     let (t1, c1) = tconst e2 tr in
-     let c = [(TList [t1], t1)] in
-     (t1, c@c1)
+  |Tail e1 -> 
+     let (t1, c1) = tconst e1 tr in
+     (t1, c1)
   |Epair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
    (TPair(t1,t2), c@c1@c2)
-  |Fst (Epair (e1,e2)) -> 
-     let (t1, c1) = tconst e1 tr in
-     let (t2, c2) = tconst e2 tr in    
-     let c = [(t1, (TPair (t1,t2)))] in
-     (t1, c@c1)
-  |Snd (Epair (e1,e2)) -> 
-     let (t1, c1) = tconst e1 tr in
-     let (t2, c2) = tconst e2 tr in    
-     let c = [(t2, (TPair (t1,t2)))] in
-   (t2, c@c2)
+  |Fst(Epair(e1,e2)) ->
+      let c = (Epair(e1,e2)) in 
+      let (t1,c1) = tconst c tr
+        in (match t1 with
+            (TPair(a,b)) -> (a, ([(TPair(a,b), TPair(a,b))]@
+                     (c1)))
+          | _ -> failwith " errore sulla coppia")
+  |Snd (Epair (e1,e2)) ->
+      let c = (Epair(e1,e2)) in 
+      let (t1,c1) = tconst c tr
+        in (match t1 with
+            (TPair(a,b)) -> (b, ([(TPair(a,b), TPair(a,b))]@
+                     (c1)))
+          | _ -> failwith " errore sulla coppia")
   |Ifthenelse (e0,e1,e2) ->
     let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
@@ -218,142 +221,6 @@ let (t0, c0) = tconst s newtypenv;;
 unify c0;;
 typeinf s;;
 
-let l = Sum (Eint 5, True);;
 
-
-typeinf l;;
-
-
-let a = Fst (Pair ( Eint 2, Eint 5));;
-
-let (t0, c0) = tconst a newtypenv;;
-
-typeinf a;;
-
-let b = Snd (Pair ( Eint 2, True));;
-
-let (t0, c0) = tconst b newtypenv;;
-
-typeinf b;;
-
-let a = Eq (Echar 'c', True );;
-
-let (t0, c0) = tconst a newtypenv;;
-typeinf a;;
-
-let a = Empty;;
-
-tconst a newtypenv;;
-
-[newvar()];;
-TInt;;
-TList [newvar()];;
-
-
-let a = Not (True);;
-
-typeinf a;;
-
-
-let f = Empty;;
-let (t0,c0) = tconst f newtypenv;;
-typeinf f;;
-
-let l = Sum( Eint 2 , Eint 3);;
-
-let (t0,c0) = tconst l newtypenv;;
-typeinf l;;
-
-
-let lista = Cons (Eint 2, Empty);;
-let (t0,c0) = tconst lista newtypenv;;
-
-let lista = Cons (Eint 2, Empty);;
-let lista2 = Cons (Eint 2, lista);;
-let (t0,c0) = tconst lista2 newtypenv;;
-typeinf lista;;
-typeinf (Eint 4);;
-
-
-let n = Eint 3;;
-
-tconst n newtypenv;;
-
-
-tconst (Eint 4) newtypenv;;
-
-let m = Eq (True, Eint 2);;
-
-typeinf m;;
-
-let a = Cons (Eint 2,Empty);;
-
-tconst a newtypenv;;
-
-
-let n = Eint 3;;
-typeinf n;;
-
-
-let a = Empty;;
-tconst a newtypenv;;
-
-typeinf a;;
-
-let a = Cons (Eint 2, Empty);;
-typeinf a;;
-
-let a = Head (Cons (Eint 2, Empty));;
-let b = Tail (Cons (Eint 2, Cons (Eint 2, Empty)));;
-
-tconst a newtypenv;;
-tconst b newtypenv;;
-
-typeinf b;;
-
-
-let s = Let(Ide "prova",
-	    Fun(Ide "x",
-                Sum(Val(Ide "x"), Fst (Pair (Eint 8, Eint 5)))),
-	     Appl(Val(Ide "prova"),Eint 8));;
-
-
-let s = Rec(Ide "y",
-	     Fun(Ide "x",
-                Sum(Val(Ide "x"), Fst (Pair (Eint 8, Eint 5)))));;
-
-tconst s newtypenv;;
-
-let w = 
-	     Fun(Ide "x",
-                Sum(Val(Ide "x"), Eint 5));;
-
-tconst w newtypenv;;
-typeinf w                      ;;  (*  *)
-
-
-
-let w =  Fun (Ide "x", Appl(Val(Ide "x"), Eint 5));;
-typeinf w;;
-
-
-let a= ( Cons (Eint 4, Empty));;
-
-typeinf a;;
-tconst a newtypenv;;
-
-[4];;
-
-tconst (Eint 5) newtypenv;;
-typeinf (Eint 5);;
-
-(typeinf (Eint 5)) = TInt;;
-
-typeinf (Cons (Echar 'c',(Cons (Eint 2, (Cons (Echar 'c', Empty)))))) ;;
-let (a,b) = tconst (Cons (Echar 'c',(Cons (Eint 2, (Cons (Echar 'c', Empty))))))  newtypenv;;
-a;;
-b;;
-unify b;;
-
-
-tconst (Eint 5) newtypenv;;
+tconst (Fst (Epair (Eint 3, Echar 'c'))) newtypenv;;
+tconst (Cons (Echar 'c', Eint 3)) newtypenv;;
