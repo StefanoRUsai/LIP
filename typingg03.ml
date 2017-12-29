@@ -215,6 +215,8 @@ let s = Let(Ide "prova",
 	     Appl(Val(Ide "prova"),Eint 8));;
 
 let (t0, c0) = tconst s newtypenv;;
+unify c0;;
+typeinf s;;
 
 let l = Sum (Eint 5, True);;
 
