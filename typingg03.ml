@@ -103,13 +103,22 @@ let rec  tconst e tr = match e with
      let (t2, c2) = tconst e2 tr in
      let c = [ (t1,t1) ; (t2, TList [t1]) ] in
        (TList [t1],c@c1@c2)  
-  |Head e1 -> 
+  (*|Head e1 -> 
      let (t1, c1) = tconst e1 tr in
-     let c = [((TList [t1]), (TList [t1]))] in
+     let c = [(t1, t1)] in
+     let tau = match t1 with
+                    TList [] -> failwith "non esiste tipo"
+                   |TList (hd::tl) ->  hd
+                   |_-> failwith "non esiste tipo" in
+
+       (tau, c@c1)*)
+ |Head (Cons (e1,e2)) -> 
+     let (t1, c1) = tconst e1 tr in
+     let c = [(t1, (TList [t1]))] in
      (t1, c@c1)
   |Tail e1 -> 
      let (t1, c1) = tconst e1 tr in
-     (t1, c1)
+       (t1, c1)
   |Epair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
@@ -149,10 +158,18 @@ let rec  tconst e tr = match e with
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TFun(t2,tx))] in
     (tx, c @ c1 @ c2)    
- | Rec (x, Fun(y,z)) -> (* da sistemare*)
+ | Rec (x, Fun(i,e)) -> (* da sistemare*)
     let tx = newvar() in
-    let (t1,c1) = tconst z (bindtyp tr x tx) in
+    let (t1,c1) = tconst e (bindtyp tr x tx) in
     (TFun (tx,t1), c1)
+
+
+ | Rec (x, Fun(e1,e2)) -> (* da sistemare*)
+    let tx = newvar() in
+    let (t1,c1) = tconst e1 (bindtyp tr x tx) in
+    let (t2,c2) = tconst e2 (bindtyp tr x tx) in
+    let c = [(tx,t1)] in   
+    (t2, c@ c1@c2)
 
 |_-> failwith "errore";;
 
@@ -224,3 +241,45 @@ typeinf s;;
 
 tconst (Fst (Epair (Eint 3, Echar 'c'))) newtypenv;;
 tconst (Cons (Echar 'c', Eint 3)) newtypenv;;
+
+tconst (Cons (Echar 'c', Eint 3)) newtypenv;;
+
+
+typeinf (Times(Eint 4,Eint 5));;
+typeinf (Eq(Eint 2,Eint 4));;
+typeinf (Eq(Eint 2,Eint 2));;
+typeinf (Times(Eint 3,Eint 4));;
+typeinf (Sum(Eint 3,Eint 2));;
+typeinf (Diff(Eint 5,Eint 3));;
+typeinf (Diff(Eint 5,Eint 8));;    
+typeinf (And(True,False));;
+typeinf (And(True,True));;
+typeinf (And(False,True));;
+typeinf (And(False,False));;
+typeinf (Or(True,False));;
+typeinf (Or(True,True));;
+typeinf (Or(False,True));;
+typeinf (Or(False,False));;     
+typeinf (Less(Eint 5,Eint 3));;
+typeinf (Less(Eint 3,Eint 5));;
+typeinf (Not(True));;
+typeinf (Not(False));;
+typeinf (True);;
+typeinf (False) ;;
+typeinf (Empty);;
+typeinf (Fst(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) )));;
+typeinf (Snd(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) ;;    
+typeinf (Fst(Sum(Eint 2, Eint 3))) emptyenv;; (* errore, ma non mi torna il test*)
+typeinf (Sum(Eint 2,Eint 3)) ;;     
+typeinf ((Cons(Eint 4,Cons(Eint 2,(Cons(Eint 1,Empty)))))) ;;
+typeinf ((Head(Cons(Eint 2,(Cons(Eint 1,Empty)))))) ;;
+typeinf ((Head(Cons(Eint 2,Empty)))) ;;
+typeinf (Head(Empty)) ;;
+typeinf ((Tail((Cons(Eint 3,Cons(Eint 2,(Cons(Eint 1,Empty)))))))) ;;   
+typeinf ((Tail(Cons(Eint 10,Empty))));;
+typeinf (Tail(Empty));;    
+
+
+let a,b =tconst (Head(Cons(Eint 4,Empty))) newtypenv;;
+
+typeinf (Head(Cons(Eint 4,Empty)));;

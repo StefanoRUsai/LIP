@@ -62,7 +62,7 @@ and bind ((Env r), x, d) = Env (fun y -> if y=x then d else r y)
 
 and applyenv ((Env r),x) = match r x with
   Undefined -> raise (UndefinedIde  x)
-  | _ as d -> d;;
+  | _ as d -> d;;  (*vuol dire che ogni eval diverso da undefined si chiama  d*)
 
 
 
@@ -83,61 +83,79 @@ and evalChar e r = match sem e r with
 
 and sem e r = match e with
   Eint n -> Int n
-| Val x ->  applyenv (r,x)
-| Sum   (e1,e2) -> Int (evalInt e1 r + evalInt e2 r) 
-| Diff  (e1,e2) -> Int (evalInt e1 r - evalInt e2 r)
-| Times (e1,e2) -> Int (evalInt e1 r * evalInt e2 r)
-| True  -> Bool true
-| False -> Bool false
-| Eq (e1,e2) -> (match sem e1 r, sem e2 r with
-    Int a, Int b   -> Bool (a=b) 
-  | Bool a, Bool b -> Bool (a=b) 
-  | Char a, Char b ->  Bool (a=b) 
-  |_-> raise TypeMismatch)
-| Less (e1,e2) -> Bool (evalInt e1 r <= evalInt e2 r)
-| Not ne -> Bool (not (evalBool ne r))
-| And (e1,e2) -> Bool (evalBool e1 r && evalBool e2 r)
-| Or (e1,e2) -> Bool (evalBool e1 r || evalBool e2 r)
-| Empty -> List []
-|Head e1        -> let a = sem e1 r in 
-                   let b = match a with
+  |  Echar c -> Char c  
+  | Val x ->  applyenv (r,x)
+  | Sum   (e1,e2) -> Int (evalInt e1 r + evalInt e2 r) 
+  | Diff  (e1,e2) -> Int (evalInt e1 r - evalInt e2 r)
+  | Times (e1,e2) -> Int (evalInt e1 r * evalInt e2 r)
+  | True  -> Bool true
+  | False -> Bool false
+  | Eq (e1,e2) -> (match sem e1 r, sem e2 r with
+                       Int a, Int b   -> Bool (a=b) 
+                     | Bool a, Bool b -> Bool (a=b) 
+                     | Char a, Char b ->  Bool (a=b) 
+                     |_-> raise TypeMismatch)
+  | Less (e1,e2) -> Bool (evalInt e1 r <= evalInt e2 r)
+  | Not ne -> Bool (not (evalBool ne r))
+  | And (e1,e2) -> Bool (evalBool e1 r && evalBool e2 r)
+  | Or (e1,e2) -> Bool (evalBool e1 r || evalBool e2 r)
+  | Empty -> List []
+  |Head e1        -> let a = sem e1 r in 
+                   let b = (match a with
                    List [] -> failwith "Lista vuota" 
                    |List (hd::tl) -> hd  
-                   |_ -> raise TypeMismatch         
+                   |_ -> raise TypeMismatch)         
                    in b 
-|Tail e1        -> let a = sem e1 r in 
-                   let b = match a with
+  |Tail e1        -> let a = sem e1 r in 
+                   let b = (match a with
                    List [] -> failwith "Lista vuota" 
                    |List (hd::tl) -> tl  
-                   |_ -> raise TypeMismatch         
+                   |_ -> raise TypeMismatch)         
                 in List b 
-| Cons (e1, e2) ->( let a = sem e2 r in 
-                   let b = match a with                      
-                   |(List l) -> match l with
-                         [] -> (sem e1 r)::[]  
-                        |(hd::tl) -> (match sem e1 r , hd  with
-                                  Int a,  Int  b -> (Int a)::l 
-                                | Bool a, Bool b -> (Bool a)::l
-                                | Char a, Char b -> (Char a)::l)
-                   |_ -> raise TypeMismatch
+  | Cons (e1, e2) ->(let a = sem e2 r in 
+                   let b = (match a with                      
+                   |(List l) ->(match l with
+                               [] -> (sem e1 r)::[]  
+                               |(hd::tl) -> (match sem e1 r , hd  with
+                                            Int a,  Int  b -> (Int a)::l 
+                                          | Bool a, Bool b -> (Bool a)::l
+                                          | Char a, Char b -> (Char a)::l
+                                          |_ -> raise TypeMismatch))
+                      |_ -> raise TypeMismatch)
+                        
                    in  List b )
-|Epair (e1,e2) -> Pair ( sem e1 r, sem e2 r)
-|Fst e -> ( match (sem e r) with
-           Pair (a, b) -> a)
-|Snd e -> ( match (sem e r) with
-           Pair (a, b) -> a)
-| Ifthenelse(e0,e1,e2) -> if evalBool e0 r then sem e1 r else sem e2 r
-| Let (x,e1,e2) -> sem e2 (bind (r,x,(sem e1 r)))
-(*| Rec (x,e1,e2) -> let rec r1 = Env(fun y -> applyenv 
-                           (bind (r1, x, (sem e1 r1))) y) in sem e2 r1;;
-| Fun (x,eq) -> Fun (x,e1,r);;
-| Apply (e1,e2) -> match sem e1 r with
-                     EFun (x,e',r') -> sem e' (bind r' x (sem e2 r))*)
-| _ -> raise TypeMismatch 
+  |Epair (e1,e2) -> Pair ( sem e1 r, sem e2 r)
+  |Fst e -> ( match (sem e r) with
+           Pair (a, b) -> a
+              |_-> raise TypeMismatch)
+  |Snd e -> ( match (sem e r) with
+           Pair (a, b) -> a
+          |_-> raise TypeMismatch)
+  | Ifthenelse(e0,e1,e2) -> if evalBool e0 r then sem e1 r else sem e2 r
+  | Let (x,e1,e2) -> sem e2 (bind (r,x,(sem e1 r)))
+  | Rec (x,e1) -> let rec r1 = Env(fun y -> applyenv ((bind (r,x,(sem e1 r1))),y)) in sem e1 r1
+  | Fun (x,eq) -> Closure ((Fun(x,eq)),r)
+  | Appl (e1,e2) -> (match sem e1 r with
+                Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(sem e2 r))))
+               | _ -> failwith "coddati")
 ;;
 
 
- sem(Times(Eint 4,Eint 5))  emptyenv;;
+let e0 = Let(Ide "succ",Fun(Ide "x", Sum(Val(Ide "x"), Eint 1)),Appl(Val(Ide "succ"),Eint 8));;
+sem e0 emptyenv;;
+
+let e1 = Rec(Ide "fact",
+		Fun(Ide "x", 
+		    Ifthenelse(Eq(Val(Ide "x"),Eint 0),
+		       Eint 1, 
+		       Times(Val(Ide "x"),
+			   Appl(Val(Ide "fact"),Diff(Val(Ide "x"), Eint 1))))),
+	       Appl(Val(Ide "fact"),Eint 5));;
+ 
+sem e1 emptyenv;;
+ 
+sem (Fun(Ide "x", Sum(Val(Ide "x"), Eint 1))) emptyenv;;
+sem(Times(Eint 4,Eint 5))  emptyenv;;
  sem(Eq(Eint 2,Eint 4))  emptyenv;;
  sem(Eq(Eint 2,Eint 2))  emptyenv;;
  sem(Times(Eint 3,Eint 4))  emptyenv;;
