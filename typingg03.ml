@@ -163,15 +163,8 @@ let rec  tconst e tr = match e with
     let (t1,c1) = tconst e (bindtyp tr x tx) in
     (TFun (tx,t1), c1)
 
-
- | Rec (x, Fun(e1,e2)) -> (* da sistemare*)
-    let tx = newvar() in
-    let (t1,c1) = tconst e1 (bindtyp tr x tx) in
-    let (t2,c2) = tconst e2 (bindtyp tr x tx) in
-    let c = [(tx,t1)] in   
-    (t2, c@ c1@c2)
-
 |_-> failwith "errore";;
+
 
 let rec subst_app t0 i t = match t0 with
     TInt -> TInt
@@ -283,3 +276,16 @@ typeinf (Tail(Empty));;
 let a,b =tconst (Head(Cons(Eint 4,Empty))) newtypenv;;
 
 typeinf (Head(Cons(Eint 4,Empty)));;
+
+
+Rec (Ide "x", (Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5))))));;
+
+let a,b =tconst (Rec (Ide "x", (Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5))))))) newtypenv;;
+a;;
+
+let a,b = tconst (Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5)))))newtypenv;;
+
+
+let s = Let(Ide "prova",
+	     Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5)))),
+	     Appl(Val(Ide "prova"),Eint 8));;
