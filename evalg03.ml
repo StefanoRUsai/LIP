@@ -1,6 +1,3 @@
-(*#use typingg03.ml;;*)
-
-
 (************************************************************)
 (*                  ENVIRONMENT/AMBIENTE                    *)
 (************************************************************)
@@ -61,25 +58,10 @@ let emptyenv =  Env(fun x -> Undefined)
 and bind ((Env r), x, d) = Env (fun y -> if y=x then d else r y)
 
 and 
+
 applyenv ((Env r),x) = r x ;;
-(*applyenv ((Env r),x) = match r x with
-  Undefined -> raise (UndefinedIde  x)
-  | _ as d -> d;; *) (*vuol dire che ogni eval diverso da  undefined si chiama  d e restituisce d*)
 
 
-(* exp vecchio_ambiente nuovo_ambiente *)
-let rec controllerFV (e,d1,d2) = match e with
-    Val v -> bind (d2, v, applyenv (d1,v)) 
-  |Eint e1 -> d2
-  |Echar e1 -> d2
-  |True | False | Empty -> d2
-  |Sum(e1,e2) |Diff(e1,e2) |Times(e1,e2) |And(e1,e2) |Or(e1,e2) 
-  |Eq(e1,e2)  |Less(e1,e2) |Cons(e1,e2) |Epair(e1,e2) |Appl(e1,e2) 
-      ->  controllerFV (e1,d1,(controllerFV (e2,d1,d2)))
-  |Head e1 | Tail e1 | Fst e1 | Snd e1 | Not e1 -> controllerFV (e1,d1,d2) 
-  |Ifthenelse (b,e1,e2) -> controllerFV (b,d1,(controllerFV (e1,d1,(controllerFV(e2,d1,d2)))))
-  |Fun (x, e1)|Rec (x, e1) -> controllerFV (e1,d1,(bind (d2,x,Undefined)))
-  |Let (x, e1, e2) -> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, x, Undefined)))));;
 
 
 let rec evalInt e r = match (sem e r) with
@@ -94,6 +76,54 @@ and evalChar e r = match sem e r with
   Char c -> c
 | _ -> raise TypeMismatch
 
+
+(*vedere pagina 4 sul controllo delle variabili, serve a uscire dal loop?*)
+(* espressione che produce, vecchio ambiente, nuovo ambiente*)
+
+and controllerFV (e,d1,d2) = match e with
+    Val v -> bind (d2, v, applyenv (d1,v)) 
+  |Eint e1 -> d2
+  |Echar e1 -> d2
+  |True | False | Empty -> d2
+  |Sum(e1,e2) |Diff(e1,e2) |Times(e1,e2) |And(e1,e2) |Or(e1,e2) 
+  |Eq(e1,e2)  |Less(e1,e2) |Cons(e1,e2) |Epair(e1,e2) |Appl(e1,e2) 
+      ->  controllerFV (e1,d1,(controllerFV (e2,d1,d2)))
+  |Head e1 | Tail e1 | Fst e1 | Snd e1 | Not e1 -> controllerFV (e1,d1,d2) 
+  |Ifthenelse (b,e1,e2) -> controllerFV (b,d1,(controllerFV (e1,d1,(controllerFV(e2,d1,d2)))))
+  |Let (x, e1, e2) -> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, x, Undefined)))))
+  |Rec (y, (Fun(x,t) as t1)) -> controllerFV (t1,d1,d2)
+  |Fun (x, e1) -> controllerFV (e1,d1,(bind (d2,x,Undefined)))
+  |_->failwith "controllo sul rec, manca il match completo"
+
+
+
+(*ricorsione vedere pagina 4 prima delle regole della semantica *)
+(* espressione che produce, vecchio ambiente, nuovo ambiente*)
+
+and sub (e,oldV,newV)  = match e with
+    Val i -> if i = oldV then newV else Val i
+  | True | False | Empty -> e
+  | Echar t -> e
+  | Eint t -> e
+  | Sum(e1,e2) -> Sum(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Diff(e1,e2) -> Diff(sub (e1,oldV,newV),sub (e2,oldV,newV))
+  | Times(e1,e2) -> Times(sub  (e1,oldV,newV), sub (e2,oldV,newV))
+  | And(e1,e2) -> And(sub  (e1,oldV,newV), sub (e2,oldV,newV))
+  | Or(e1,e2) -> Or(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Eq(e1,e2) -> Eq(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Less(e1,e2) -> Less(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Cons(e1,e2) -> Cons(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Epair(e1,e2) -> Epair(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Not e1 -> Not(sub (e1,oldV,newV))
+  | Head e1 -> Head(sub (e1,oldV,newV))
+  | Tail e1 -> Tail(sub (e1,oldV,newV))
+  | Fst e1 -> Fst(sub (e1,oldV,newV))
+  | Snd e1 -> Snd(sub (e1,oldV,newV))
+  | Ifthenelse(b,e1,e2) -> Ifthenelse(sub (b,oldV,newV), sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Let(x,e1,e2) -> Let(x, sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Fun(x,e1) -> Fun(x, sub (e1,oldV,newV))
+  | Appl(e1,e2) -> Appl(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | _ -> failwith "Errore nella sostituzione Rec, manca il match completo?"
 
 and sem e r = match e with
     Eint n -> Int n
@@ -155,18 +185,15 @@ and sem e r = match e with
           |_-> raise TypeMismatch)
   | Ifthenelse(e0,e1,e2) -> if evalBool e0 r then sem e1 r else sem e2 r
   | Let (x,e1,e2) -> sem e2 (bind (r,x,(sem e1 r)))
-(*  | Rec (x,e1) -> let rec r1 = Env(fun y -> applyenv ((bind (r,x,(sem e1 r1))),y)) in sem e1 r1*)
-  | Rec (y,e1) -> (let x,t = (match e1 with
-                            Fun (i,e2) -> i,e2
-                            |_-> failwith "non esiste funzione") in  
-                  let e3,d= (match (sem (Fun (x,t)) r) with
-                            Closure (e4,d1) ->e4,d1
-                           |_ ->failwith "non esiste closure") in    
-                  let  r1 = bind (d,y,(sem (Fun (x,t)) d)) in sem e1 r1) (* sarebbe bello se ci fosse la fun dopo il rec*)
+  | Rec(y,(Fun(x,e1))) -> 
+          let newValue = (sub (e1,y,(Rec(y,Fun(x,e1))))) in
+            Closure(Fun(x,newValue), controllerFV (newValue,r,emptyenv))
   | Fun (x,e1) -> Closure ((Fun(x,e1)), controllerFV (e1,r,emptyenv))
   | Appl (e1,e2) -> (match sem e1 r with
-                Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(sem e2 r))))
+                Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(sem e2 r))))  
                | _ -> failwith "coddati")
+  |_-> failwith "sem rec madonna, matcha male come negli altri casi"
+
 ;;
 
 let e0 = Let(
@@ -178,7 +205,7 @@ let a = Sum (Eint 2, Eint 3);;
 sem e0 emptyenv;;
 
 
-
+sem (Cons (Eint 2, Empty)) emptyenv;;
 
 
 
@@ -256,3 +283,57 @@ let a =emptyenv;;
 let b = bind (a,(Ide "x"), Int 2);;
 
 applyenv (b,(Ide "x"));;
+
+
+
+let e1 = Let(Ide "fact",
+             Rec(Ide "fact", 
+		Fun(Ide "x",  Ifthenelse(
+                      Eq(Val(Ide "x"),Eint 0), 
+                      Eint 1, 
+                      Times(Val(Ide "x"), Appl(Val(Ide "fact"),Diff(Val(Ide "x"),Eint 1)))
+                    ))),
+	       Appl(Val(Ide "fact"),Eint 5));;
+ 
+sem e1 emptyenv;;
+
+let e0 =Rec (Ide "y", 
+                Fun (Ide "y", 
+                   Ifthenelse(  Eq(Val(Ide "y"),Eint 0), 
+                                         Eint 1, 
+                                         Times (Val (Ide "y"), Appl (Val (Ide "y"), Eint 2)))));;
+
+
+sem e0 emptyenv;;
+
+
+let e0 =Let (Ide "prova", 
+             Rec (Ide "y", 
+                Fun (Ide "y", 
+                   Ifthenelse(  Eq(Val(Ide "y"),Eint 0), 
+                                         Eint 1, 
+                                         Times (Val (Ide "y"), Appl (Val (Ide "y"), Eint 2))))), 
+             Appl(Val (Ide "prova"), Val (Ide "y")));;
+
+let e1 = Appl( Fun ( Ide "x", Sum (Val (Ide "x"), Eint 3)), Eint 5);; 
+sem e1 emptyenv;;
+
+let e3 = Appl(Rec (
+              (Ide "y"),
+               Appl( Fun ((Ide "x"), 
+                          Ifthenelse(  Eq(Val(Ide "y"), Eint 0),  
+                          Sum (Val (Ide "x"), Eint 1),                                             
+                          Diff((Appl(Val (Ide "y"), Eint 3)), Eint 1))), 
+               Eint 1)), Eint 2);;
+
+sem e3 emptyenv;;
+
+let recurs = Rec(Ide "y", Fun( Ide "x", 
+                               Ifthenelse( (Eq(Val (Ide "x"), Eint 0) ),
+                               (Eint 1),
+                                           Sum( Eint 2, 
+                                                Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
+                                              )
+                                         )));;
+sem recurs emptyenv;;
+sem (Appl(recurs, Eint 2)) emptyenv;;

@@ -66,32 +66,67 @@ applyenv ((Env r),x) = r x ;;
   | _ as d -> d;; *) (*vuol dire che ogni eval diverso da  undefined si chiama  d e restituisce d*)
 
 
-(* exp vecchio_ambiente nuovo_ambiente *)
-let rec controllerFV (e,d1,d2) = match e with
-    Val v -> bind (d2, v, applyenv (d1,v)) 
-  | Eint e1 -> d2
-  | Echar e1 -> d2
-  | True | False | Empty -> d2
-  | Sum(e1,e2) | Diff(e1,e2) | Times(e1,e2) | And(e1,e2) | Or(e1,e2) 
-  | Eq(e1,e2)  | Less(e1,e2) | Cons(e1,e2) | Epair(e1,e2) | Appl(e1,e2) 
-      ->  controllerFV (e1,d1,(controllerFV (e2,d1,d2)))
-  | Head e1 | Tail e1 | Fst e1 | Snd e1 | Not e1 -> controllerFV (e1,d1,d2) 
-  | Ifthenelse (b,e1,e2) -> controllerFV (b,d1,(controllerFV (e1,d1,(controllerFV(e2,d1,d2)))))
-  | Fun (x, e1)|Rec (x, e1) -> controllerFV (e1,d1,(bind (d2,x,Undefined)))
-  | Let (x, e1, e2) -> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, x, Undefined)))))
-  |_-> failwith "try e raise ci andranno?";;
-
-let rec evalInt e r = match (sem e r) with
+let rec evalInt e r = match semtry e r with
   Int n -> n
 | _ -> raise TypeMismatch
  
-and evalBool e r = match sem e r with
+and evalBool e r = match semtry e r with
   Bool b -> b
 | _ -> raise TypeMismatch
 
-and evalChar e r = match sem e r with
+and evalChar e r = match semtry e r with
   Char c -> c
 | _ -> raise TypeMismatch
+
+
+
+(*vedere pagina 4 sul controllo delle variabili, serve a uscire dal loop?*)
+(* espressione che produce, vecchio ambiente, nuovo ambiente*)
+
+and controllerFV (e,d1,d2) = match e with
+    Val v -> bind (d2, v, applyenv (d1,v)) 
+  |Eint e1 -> d2
+  |Echar e1 -> d2
+  |True | False | Empty -> d2
+  |Sum(e1,e2) |Diff(e1,e2) |Times(e1,e2) |And(e1,e2) |Or(e1,e2) 
+  |Eq(e1,e2)  |Less(e1,e2) |Cons(e1,e2) |Epair(e1,e2) |Appl(e1,e2) 
+      ->  controllerFV (e1,d1,(controllerFV (e2,d1,d2)))
+  |Head e1 | Tail e1 | Fst e1 | Snd e1 | Not e1 -> controllerFV (e1,d1,d2) 
+  |Ifthenelse (b,e1,e2) -> controllerFV (b,d1,(controllerFV (e1,d1,(controllerFV(e2,d1,d2)))))
+  |Let (x, e1, e2) -> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, x, Undefined)))))
+  |Rec (y, (Fun(x,t) as t1)) -> controllerFV (t1,d1,d2)
+  |Fun (x, e1) -> controllerFV (e1,d1,(bind (d2,x,Undefined)))
+  |_->failwith "controllo sul rec, manca il match completo"
+
+
+
+(*ricorsione vedere pagina 4 prima delle regole della semantica *)
+(* espressione che produce, vecchio ambiente, nuovo ambiente*)
+
+and sub (e,oldV,newV)  = match e with
+     Eint t -> e
+  | Echar t -> e
+  | Val i -> if i = oldV then newV else Val i   
+  | True | False | Empty -> e 
+  | Sum(e1,e2) -> Sum(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Diff(e1,e2) -> Diff(sub (e1,oldV,newV),sub (e2,oldV,newV))
+  | Times(e1,e2) -> Times(sub  (e1,oldV,newV), sub (e2,oldV,newV))
+  | And(e1,e2) -> And(sub  (e1,oldV,newV), sub (e2,oldV,newV))
+  | Or(e1,e2) -> Or(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Eq(e1,e2) -> Eq(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Less(e1,e2) -> Less(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Cons(e1,e2) -> Cons(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Epair(e1,e2) -> Epair(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Not e1 -> Not(sub (e1,oldV,newV))
+  | Head e1 -> Head(sub (e1,oldV,newV))
+  | Tail e1 -> Tail(sub (e1,oldV,newV))
+  | Fst e1 -> Fst(sub (e1,oldV,newV))
+  | Snd e1 -> Snd(sub (e1,oldV,newV))
+  | Ifthenelse(b,e1,e2) -> Ifthenelse(sub (b,oldV,newV), sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Let(x,e1,e2) -> Let(x, sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | Fun(x,e1) -> Fun(x, sub (e1,oldV,newV))
+  | Appl(e1,e2) -> Appl(sub (e1,oldV,newV), sub (e2,oldV,newV))
+  | _ -> failwith "Errore nella sostituzione Rec, manca il match completo?"
 
 
 and semtry e r = match e with
@@ -103,7 +138,7 @@ and semtry e r = match e with
   | Times (e1,e2) -> Int (evalInt e1 r * evalInt e2 r)
   | True  -> Bool true
   | False -> Bool false
-  | Eq (e1,e2) -> (match sem e1 r, sem e2 r with
+  | Eq (e1,e2) -> (match semtry e1 r, semtry e2 r with
                        Int a, Int b   -> Bool (a=b) 
                      | Bool a, Bool b -> Bool (a=b) 
                      | Char a, Char b ->  Bool (a=b) 
@@ -117,23 +152,23 @@ and semtry e r = match e with
   | And (e1,e2) -> Bool (evalBool e1 r && evalBool e2 r)
   | Or (e1,e2) -> Bool (evalBool e1 r || evalBool e2 r)
   | Empty -> List []
-  | Head e1 -> let a = sem e1 r in 
+  | Head e1 -> let a = semtry e1 r in 
                let b = (match a with
                         List [] -> failwith "Lista vuota" 
                       | List (hd::tl) -> hd  
                       | _ -> raise TypeMismatch)         
                in b 
-  |Tail e1 -> let a = sem e1 r in 
+  |Tail e1 -> let a = semtry e1 r in 
               let b = (match a with
                        List [] -> failwith "Lista vuota" 
                      | List (hd::tl) -> tl  
                      | _ -> raise TypeMismatch)         
               in List b 
-  | Cons (e1, e2) ->(let a = sem e2 r in 
+  | Cons (e1, e2) ->(let a = semtry e2 r in 
                    let b = (match a with                      
                    |(List l) ->(match l with
-                               [] -> (sem e1 r)::[]  
-                               |(hd::tl) -> (match sem e1 r , hd  with
+                               [] -> (semtry e1 r)::[]  
+                               |(hd::tl) -> (match semtry e1 r , hd  with
                                             Int a,  Int  b -> (Int a)::l 
                                           | Bool a, Bool b -> (Bool a)::l
                                           | Char a, Char b -> (Char a)::l
@@ -142,35 +177,29 @@ and semtry e r = match e with
                                           | List a,List b -> (List a)::l 
                                           | Undefined, Undefined -> (Undefined)::l
                                           |_ -> raise TypeMismatch))
-                      |_ -> raise TypeMismatch)
-                        
+                      |_ -> raise TypeMismatch)                        
                    in  List b )
-  |Epair (e1,e2) -> Pair ( sem e1 r, sem e2 r)
-  |Fst e -> ( match (sem e r) with
+  |Epair (e1,e2) -> Pair ( semtry e1 r, semtry e2 r)
+  |Fst e -> ( match (semtry e r) with
            Pair (a, b) -> a
               |_-> raise TypeMismatch)
-  |Snd e -> ( match (sem e r) with
+  |Snd e -> ( match (semtry e r) with
            Pair (a, b) -> b
           |_-> raise TypeMismatch)
-  | Ifthenelse(e0,e1,e2) -> if evalBool e0 r then sem e1 r else sem e2 r
-  | Let (x,e1,e2) -> sem e2 (bind (r,x,(sem e1 r)))
-(*  | Rec (x,e1) -> let rec r1 = Env(fun y -> applyenv ((bind (r,x,(sem e1 r1))),y)) in sem e1 r1*)
-  | Rec (y,e1) -> (let x,t = (match e1 with
-                            Fun (i,e2) -> i,e2
-                            |_-> failwith "non esiste funzione") in  
-                  let e3,d= (match (sem (Fun (x,t)) r) with
-                            Closure (e4,d1) ->e4,d1
-                           |_ ->failwith "non esiste closure") in    
-                  let  r1 = bind (d,y,(sem (Fun (x,t)) d)) in sem e1 r1) (* sarebbe bello se ci fosse la fun dopo il rec*)
+  | Ifthenelse(e0,e1,e2) -> if evalBool e0 r then semtry e1 r else semtry e2 r
+  | Let (x,e1,e2) -> semtry e2 (bind (r,x,(semtry e1 r)))
+  | Rec(y,(Fun(x,e1))) -> 
+          let newValue = (sub (e1,y,(Rec(y,Fun(x,e1))))) in
+            Closure(Fun(x,newValue), controllerFV (newValue,r,emptyenv)) 
   | Fun (x,e1) -> Closure ((Fun(x,e1)), controllerFV (e1,r,emptyenv))
-  | Appl (e1,e2) -> (match sem e1 r with
-                Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(sem e2 r))))
+  | Appl (e1,e2) -> (match semtry e1 r with
+                Closure ((Fun(x,f)),d) -> (semtry f (bind (d,x,(semtry e2 r))))
                | _ -> failwith "coddati")  
-  | Try (e1,ide,e2) -> (try (sem e1 (controllerFV (e1,r,emptyenv))) with 
-                          |UndefinedIde id -> if id=ide then sem e2 r else 
+  | Try (e1,ide,e2) -> (try (semtry e1 (controllerFV (e1,r,emptyenv))) with 
+                          |UndefinedIde id -> if id=ide then semtry e2 r else 
                              failwith "errore brutto brutto")
   | Raise ide -> raise (UndefinedIde ide)
-    
+  |_-> failwith "problema guard per via del rec in sem"     
 ;;
 
 let a = Let(Ide "x", (Try(Ifthenelse (False,Eint 3,(Raise (Ide "prova"))),
