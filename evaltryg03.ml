@@ -74,6 +74,7 @@ and evalBool e r = match semtry e r with
   Bool b -> b
 | _ -> raise TypeMismatch
 
+
 and evalChar e r = match semtry e r with
   Char c -> c
 | _ -> raise TypeMismatch
@@ -84,20 +85,22 @@ and evalChar e r = match semtry e r with
 (* espressione che produce, vecchio ambiente, nuovo ambiente*)
 
 and controllerFV (e,d1,d2) = match e with
-    Val v -> bind (d2, v, applyenv (d1,v)) 
-  |Eint e1 -> d2
-  |Echar e1 -> d2
-  |True | False | Empty -> d2
-  |Sum(e1,e2) |Diff(e1,e2) |Times(e1,e2) |And(e1,e2) |Or(e1,e2) 
-  |Eq(e1,e2)  |Less(e1,e2) |Cons(e1,e2) |Epair(e1,e2) |Appl(e1,e2) 
+    Eint e1 -> d2
+  | Echar e1 -> d2
+  | Val v -> bind (d2, v, applyenv (d1,v)) 
+  | True | False | Empty -> d2
+  | Sum(e1,e2) |Diff(e1,e2) |Times(e1,e2) |And(e1,e2) |Or(e1,e2) 
+  | Eq(e1,e2)  |Less(e1,e2) |Cons(e1,e2) |Epair(e1,e2) |Appl(e1,e2) 
       ->  controllerFV (e1,d1,(controllerFV (e2,d1,d2)))
-  |Head e1 | Tail e1 | Fst e1 | Snd e1 | Not e1 -> controllerFV (e1,d1,d2) 
-  |Ifthenelse (b,e1,e2) -> controllerFV (b,d1,(controllerFV (e1,d1,(controllerFV(e2,d1,d2)))))
-  |Let (x, e1, e2) -> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, x, Undefined)))))
-  |Rec (y, (Fun(x,t) as t1)) -> controllerFV (t1,d1,d2)
-  |Fun (x, e1) -> controllerFV (e1,d1,(bind (d2,x,Undefined)))
-  |_->failwith "controllo sul rec, manca il match completo"
+  | Head e1 | Tail e1 | Fst e1 | Snd e1 | Not e1 -> controllerFV (e1,d1,d2) 
+  | Ifthenelse (b,e1,e2) -> controllerFV (b,d1,(controllerFV (e1,d1,(controllerFV(e2,d1,d2)))))
+  | Let (x, e1, e2) -> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, x, Undefined)))))
+  | Rec (y, (Fun(x,t) as t1)) -> controllerFV (t1,d1,d2)
+  | Fun (x, e1) -> controllerFV (e1,d1,(bind (d2,x,Undefined)))
+  | Try (e1,i,e2)-> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, i, Undefined)))))
+  | Raise i -> d2
 
+  | _->failwith "controllo sul rec, manca il match completo"
 
 
 (*ricorsione vedere pagina 4 prima delle regole della semantica *)
@@ -202,12 +205,14 @@ and semtry e r = match e with
   |_-> failwith "problema guard per via del rec in sem"     
 ;;
 
-let a = Let(Ide "x", (Try(Ifthenelse (False,Eint 3,(Raise (Ide "prova"))),
+let a = Let(Ide "x", (Try
+                        (Ifthenelse (False,Eint 3,Raise (Ide "prova"))),
                (Ide "prova"),
                Eint 69)),
-      Val (Ide "x"));;
+      Val (Ide "x");;
 
-sem a emptyenv;;
+semtry (Try (Ifthenelse (False,Eint 3,(Raise (Ide "prova")))))::
+semtry a emptyenv;;
 
 
  
@@ -265,4 +270,37 @@ let e1 = Rec(Ide "fact",Let(Ide "fact",
 			   Appl(Val(Ide "fact"),Diff(Val(Ide "x"), Eint 1))))),
 	       Appl(Val(Ide "fact"),Eint 5)));;
 
+
+
+
+semtry (Try(Raise (Ide "x"),(Ide "x"),Eint 10)) emptyenv;;
+
+
+
+let e1 = Let(Ide "fact",
+             Rec(Ide "fact", 
+		Fun(Ide "x",  Ifthenelse(
+                      Eq(Val(Ide "x"),Eint 0), 
+                      Eint 1, 
+                      Times(Val(Ide "x"), Appl(Val(Ide "fact"),Diff(Val(Ide "x"),Eint 1)))
+                    ))),
+	       Appl(Val(Ide "fact"),Eint 5));;
+ 
+sem e1 emptyenv;;
+
+
+
+let a = Let(Ide "succ", 
+             Fun(Ide "x", (Ifthenelse
+                   ( Eq (Val(Ide "x"), Eint 0), Eint 2, Eint 3))), 
+             Appl(Val(Ide "succ"), Eint 8));;
+
+
+semtry (Try(Raise (Ide "x"),(Ide "x"),Eint 10)) emptyenv;;
+
+
+
+
+
+semtry a emptyenv;;
 

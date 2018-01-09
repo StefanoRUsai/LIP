@@ -318,13 +318,13 @@ let e0 =Let (Ide "prova",
 let e1 = Appl( Fun ( Ide "x", Sum (Val (Ide "x"), Eint 3)), Eint 5);; 
 sem e1 emptyenv;;
 
-let e3 = Appl(Rec (
+let e3 = Rec (
               (Ide "y"),
                Appl( Fun ((Ide "x"), 
                           Ifthenelse(  Eq(Val(Ide "y"), Eint 0),  
                           Sum (Val (Ide "x"), Eint 1),                                             
                           Diff((Appl(Val (Ide "y"), Eint 3)), Eint 1))), 
-               Eint 1)), Eint 2);;
+               Eint 1));;
 
 sem e3 emptyenv;;
 
@@ -335,5 +335,20 @@ let recurs = Rec(Ide "y", Fun( Ide "x",
                                                 Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
                                               )
                                          )));;
-sem recurs emptyenv;;
-sem (Appl(recurs, Eint 2)) emptyenv;;
+semtry recurs emptyenv;;
+semtry (Appl(recurs, Eint 2)) emptyenv;;
+
+
+
+let list = Rec(Ide "y", Fun( Ide "x", 
+                               Ifthenelse( (Eq(Val (Ide "x"), Eint 0) ),
+                               Empty,
+                                           Cons( Val (Ide "x"), 
+                                                Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
+                                              )
+                                         )));;
+semtry (Appl(list, Eint 500)) emptyenv;;
+
+semtry (Appl(list, Eint 100)) emptyenv;;
+
+semtry (Times(Eint 10, Eint 15)) emptyenv;;

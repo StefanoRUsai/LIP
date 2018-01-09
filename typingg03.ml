@@ -1,5 +1,4 @@
 (* Progetto gruppo con identificativo g03*)
-(*#use evalg03.ml;;*)
 (*Tipi exp, espressioni di dati astratti  eterogeni*)
 
 type ide = Ide of string;;
@@ -151,8 +150,10 @@ let rec  tconst e tr = match e with
     (tx, c @ c1 @ c2)    
  | Rec (x, Fun(i,e)) -> (* da sistemare*)
     let tx = newvar() in
-    let (t1,c1) = tconst e (bindtyp tr x tx) in
-    (TFun (tx,t1), c1)
+    let (t1,c1) = tconst (Fun(i,e)) (bindtyp tr x tx) in
+   (match t1 with
+        TFun(a,b) -> (TFun(a,b), ([(TFun(a,b),tx)]@c1))
+      |_->failwith "varie bestemmie quando non funziona")      
 
 |_-> failwith "errore";;
 
@@ -285,7 +286,26 @@ a;;
 
 let a,b = tconst (Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5)))))newtypenv;;
 
-
+typeinf  (Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5)))));;
 let s = Let(Ide "prova",
 	     Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5)))),
 	     Appl(Val(Ide "prova"),Eint 8));;
+typeinf s;;
+
+
+let a =Cons (Eint 2, Eint 3);;
+a;;
+
+typeinf a;;
+
+
+let list =Rec (Ide "y",
+               Fun (Ide "x",
+                    Ifthenelse (Eq (Val (Ide "x"), Eint 0), Empty,
+                                Cons (Val (Ide "x"), Appl (Val (Ide "y"), Diff (Val (Ide "x"), Eint 1))))));;
+
+typeinf list;;
+
+
+
+typeinf (Eq(Eint 0, Eint 3));;
