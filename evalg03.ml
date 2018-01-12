@@ -3,37 +3,36 @@
 (************************************************************)
 
 (* "tipo valutazione dell'esprezzione" *)
-(* il tipo evn è da rivedere / chiedere al professore*)
 
 
 type ide = Ide of string;;
 
 type exp =
   Val of ide                     (*Valore *)
-| Eint of int                    (*espressione intero*)
-| Echar of char                  (*espressione carattere*)
-| True                           (*Bool vero*)
-| False                          (*Bool falso*)
-| Empty                          (*lista vuota*)
-| Sum of exp * exp               (* somma, appartiene agli operatori*)
-| Diff of exp * exp              (* differenza, appartiene agli operatori*)
-| Times of exp * exp             (* moltiplicazione, appartiene agli operatori*)
-| And of exp * exp               (* operatore logico dell'and *)
-| Or of exp * exp                (* operatore logico dell'or*)
-| Not of exp                     (* negazione logica*)
-| Eq of exp * exp                (*equivalenza*)
-| Less of exp * exp              (*operatore logico minore*)
-| Cons of exp * exp              (*costruttore della lista ::*)
-| Head of exp                    (*testa di una lista*)
-| Tail of exp                    (*Coda di una lista*)
-| Fst of exp                     (* Primo elemento di una coppia*)
-| Snd of exp                     (* secondo elemento di una coppia*)
-| Epair of exp * exp              (*coppia *)
-| Ifthenelse of exp * exp * exp  (*condizione?*)
-| Let of ide * exp * exp         (*Inizio delimitatore Blocco?*)
-| Fun of ide * exp               (*funzione*)
-| Appl of exp * exp              (*applicazione*)
-| Rec of ide * exp;;             (* funzione ricorsiva*)
+  | Eint of int                    (*espressione intero*)
+  | Echar of char                  (*espressione carattere*)
+  | True                           (*Bool vero*)
+  | False                          (*Bool falso*)
+  | Empty                          (*lista vuota*)
+  | Sum of exp * exp               (* somma, appartiene agli operatori*)
+  | Diff of exp * exp              (* differenza, appartiene agli operatori*)
+  | Times of exp * exp             (* moltiplicazione, appartiene agli operatori*)
+  | And of exp * exp               (* operatore logico dell'and *)
+  | Or of exp * exp                (* operatore logico dell'or*)
+  | Not of exp                     (* negazione logica*)
+  | Eq of exp * exp                (*equivalenza*)
+  | Less of exp * exp              (*operatore logico minore*)
+  | Cons of exp * exp              (*costruttore della lista ::*)
+  | Head of exp                    (*testa di una lista*)
+  | Tail of exp                    (*Coda di una lista*)
+  | Fst of exp                     (* Primo elemento di una coppia*)
+  | Snd of exp                     (* secondo elemento di una coppia*)
+  | Epair of exp * exp              (*coppia *)
+  | Ifthenelse of exp * exp * exp  (*condizione?*)
+  | Let of ide * exp * exp         (*Inizio delimitatore Blocco?*)
+  | Fun of ide * exp               (*funzione*)
+  | Appl of exp * exp              (*applicazione*)
+  | Rec of ide * exp;;             (* funzione ricorsiva*)
 
 
 type eval =
@@ -48,23 +47,24 @@ and
  env = Env of (ide -> eval);;
 
 
+ 
 exception UndefinedIde of ide;;
 exception TypeMismatch ;;
 
+      
 
-
-let emptyenv =  Env(fun x -> Undefined)
-
-and bind ((Env r), x, d) = Env (fun y -> if y=x then d else r y)
-
-and 
-
-applyenv ((Env r),x) = r x ;;
+let rec emptyenv =  Env(fun x -> Undefined)
+and bind (r, x, d) = Env (fun y -> if y=x then d else applyenv (r,y))
+and applyenv ((Env r),x) = r x ;;
 
 
 
 
-let rec evalInt e r = match (sem e r) with
+let rec testa lista = match lista with
+    []-> sem Empty emptyenv
+  |hd::tl -> hd 
+
+and  evalInt e r = match (sem e r) with
   Int n -> n
 | _ -> raise TypeMismatch
  
@@ -88,7 +88,7 @@ and controllerFV (e,d1,d2) = match e with
   |Sum(e1,e2) |Diff(e1,e2) |Times(e1,e2) |And(e1,e2) |Or(e1,e2) 
   |Eq(e1,e2)  |Less(e1,e2) |Cons(e1,e2) |Epair(e1,e2) |Appl(e1,e2) 
       ->  controllerFV (e1,d1,(controllerFV (e2,d1,d2)))
-  |Head e1 | Tail e1 | Fst e1 | Snd e1 | Not e1 -> controllerFV (e1,d1,d2) 
+  |Head e1 | Tail e1 | Fst e1 | Snd e1  | Not e1 -> controllerFV (e1,d1,d2) 
   |Ifthenelse (b,e1,e2) -> controllerFV (b,d1,(controllerFV (e1,d1,(controllerFV(e2,d1,d2)))))
   |Let (x, e1, e2) -> controllerFV (e1,d1,( controllerFV (e2,d1,(bind (d2, x, Undefined)))))
   |Rec (y, (Fun(x,t) as t1)) -> controllerFV (t1,d1,d2)
@@ -143,7 +143,7 @@ and sem e r = match e with
                      | Closure(a,b), Closure (c,d) -> Bool (a=c&&b=d)    
                      |Undefined, Undefined -> Bool (Undefined=Undefined)
                      |_-> raise TypeMismatch)
-  | Less (e1,e2) -> Bool (evalInt e1 r <= evalInt e2 r)
+  | Less (e1,e2) -> Bool (evalInt e1 r < evalInt e2 r)
   | Not ne -> Bool (not (evalBool ne r))
   | And (e1,e2) -> Bool (evalBool e1 r && evalBool e2 r)
   | Or (e1,e2) -> Bool (evalBool e1 r || evalBool e2 r)
@@ -161,21 +161,42 @@ and sem e r = match e with
                    |_ -> raise TypeMismatch)         
                 in List b 
   | Cons (e1, e2) ->(let a = sem e2 r in 
-                   let b = (match a with                      
-                   |(List l) ->(match l with
-                               [] -> (sem e1 r)::[]  
-                               |(hd::tl) -> (match sem e1 r , hd  with
-                                            Int a,  Int  b -> (Int a)::l 
-                                          | Bool a, Bool b -> (Bool a)::l
-                                          | Char a, Char b -> (Char a)::l
-                                          | Pair (a,b), Pair (c,d) -> (Pair (a,b))::l
-                                          | Closure (a,b), Closure (c,d) -> (Closure (a,b))::l
-                                          | List a,List b -> (List a)::l 
-                                          | Undefined, Undefined -> (Undefined)::l
-                                          |_ -> raise TypeMismatch))
-                      |_ -> raise TypeMismatch)
-                        
-                   in  List b )
+      let b = (match a with                     
+      |(List l) ->(match l with
+                   [] -> (sem e1 r)::[]  
+                  |(hd::tl) -> (match sem e1 r , hd  with
+                                 Int a,  Int  b -> (Int a)::l 
+                                 | Bool a, Bool b -> (Bool a)::l
+                                 | Char a, Char b -> (Char a)::l
+                                 | Pair (Int a , Int b), Pair (Int c , Int d) -> (Pair (Int a,Int b))::l
+                                 | Pair (Bool a , Bool b), Pair (Bool c , Bool d) -> (Pair (Bool a, Bool b))::l
+                                 | Pair (Char a , Char b), Pair (Char c , Char d) -> (Pair (Char a, Char b))::l                                  
+                                 | Pair (Int a , Char b), Pair (Int c , Char d) -> (Pair (Int a , Char b))::l
+                                 | Pair (Bool a , Char b), Pair (Bool c , Char d) -> (Pair (Bool a , Char b))::l
+                                 | Pair (Int a , Bool b), Pair (Int c , Bool d) -> (Pair(Int a , Bool b))::l
+                                 | Pair (Char a , Bool b), Pair (Char c , Bool d) -> (Pair  (Char a , Bool b))::l 
+                                 | Pair (Bool a , Int b), Pair (Bool c , Int d) -> (Pair (Bool a , Int b))::l
+                                 | Pair (Char a , Int b), Pair (Char c , Int d) -> (Pair (Char a , Int b))::l                                  
+                                 | _ as a,  List b -> (match a, (testa  b) with
+                                        List [Int a],  Int  b -> (List [Int a])::l 
+                                      | List [Bool a], Bool b -> (List [Bool a])::l
+                                      | List [Char a], Char b -> (List [Char a])::l                                      
+                                      | List [Pair (Int a , Int b)], Pair (Int c , Int d) -> (List [Pair (Int a , Int b)])::l
+                                      | List [Pair (Bool a , Bool b)], Pair (Bool c , Bool d) -> (List [Pair (Bool a , Bool b)])::l
+                                      | List [Pair (Char a , Char b)], Pair (Char c , Char d) -> (List [Pair (Char a , Char b)])::l                                  
+                                      | List [Pair (Int a , Char b)], Pair (Int c , Char d) -> ( List [Pair (Int a , Char b)])::l
+                                      | List [Pair (Bool a , Char b)], Pair (Bool c , Char d) -> (List [Pair (Bool a , Char b)])::l
+                                      | List [Pair (Int a , Bool b)], Pair (Int c , Bool d) -> ( List [Pair (Int a , Bool b)])::l
+                                      | List [Pair (Char a , Bool b)], Pair (Char c , Bool d) -> (List [Pair (Char a , Bool b)])::l 
+                                      | List [Pair (Bool a , Int b)], Pair (Bool c , Int d) -> (List [Pair (Bool a , Int b)])::l
+                                      | List [Pair (Char a , Int b)], Pair (Char c , Int d) -> (List [Pair (Char a , Int b)])::l                                     
+                                      | List [], _ as c -> failwith "non posso collegare liste vuote a liste piene"
+                                      |_ as c, List []-> c::l
+                                      |_-> failwith "errore liste di liste sem")
+                                 | Undefined, Undefined -> (Undefined)::l
+                                 |_ -> failwith "Errore liste"))
+                      |_ -> failwith "errore liste 2")
+                      in  List b )
   |Epair (e1,e2) -> Pair ( sem e1 r, sem e2 r)
   |Fst e -> ( match (sem e r) with
            Pair (a, b) -> a
@@ -201,21 +222,10 @@ let e0 = Let(
   Fun(Ide "x", Sum(Val(Ide "x"), Eint 1)),
   Appl(Val(Ide "succ"),Eint 8));;
 
+let prova1 = sem e0 emptyenv ;;
+assert (if not  (prova1 = Int 9) then print_endline "deva dare 9";  (prova1 = Int 9));;
+
 let a = Sum (Eint 2, Eint 3);;
-sem e0 emptyenv;;
-
-
-sem (Cons (Eint 2, Empty)) emptyenv;;
-
-
-
-let e1 = Let(Ide "fact",Rec(Ide "x",
-		Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Eint 0),Eint 1, Times(Val(Ide "x"),
-			   Appl(Val(Ide "fact"),Diff(Val(Ide "x"), Eint 1)))))),
-	       Appl(Val(Ide "fact"),Eint 5));;
-sem e1 emptyenv;;
-
-
 
 let e1 = Rec(Ide "y", Let(Ide "x",Fun(Ide "x", Sum(Val(Ide "x"), Eint 1)),Appl(Val(Ide "x"),Eint 8)));;
  
@@ -335,8 +345,8 @@ let recurs = Rec(Ide "y", Fun( Ide "x",
                                                 Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
                                               )
                                          )));;
-semtry recurs emptyenv;;
-semtry (Appl(recurs, Eint 2)) emptyenv;;
+sem recurs emptyenv;;
+sem (Appl(recurs, Eint 2)) emptyenv;;
 
 
 
@@ -347,8 +357,82 @@ let list = Rec(Ide "y", Fun( Ide "x",
                                                 Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
                                               )
                                          )));;
-semtry (Appl(list, Eint 500)) emptyenv;;
+sem (Appl(list, Eint 500)) emptyenv;;
 
-semtry (Appl(list, Eint 100)) emptyenv;;
+sem (Appl(list, Eint 100)) emptyenv;;
 
-semtry (Times(Eint 10, Eint 15)) emptyenv;;
+sem (Times(Eint 10, Eint 15)) emptyenv;;
+
+
+
+let list=Rec (Ide "y",
+   Fun (Ide "x",
+    Ifthenelse (Eq (Val (Ide "x"), Eint 0), Empty,
+     Cons (Val (Ide "x"), Appl (Val (Ide "y"), Diff (Val (Ide "x"), Eint 1))))));;
+
+sem (Appl(list, Eint 10)) emptyenv;;
+
+
+let prova= Fun (Ide "x", Not (Val (Ide "x")));; 
+let prova2 =  Let(Ide "x", Fun (Ide "x", Not (Val (Ide "x"))), Appl(Val (Ide "x"), True));;
+
+sem prova2 emptyenv;;
+
+
+
+fun x -> x+1=fun x -> x+1;;
+
+sem (Cons((Epair (Eint 2, Echar 'x')), (Cons ((Epair (Eint 2, Echar 'x')), Empty)))) emptyenv;;
+sem (Cons((Epair (Eint 2, Eint 2)), (Cons ((Epair (Eint 2, Echar 'x')), Empty)))) emptyenv;;
+
+sem (Epair (Eint 2, Echar 'x')) emptyenv;;
+sem (Cons (Cons (Eint 2 , Empty)),  (Cons (Echar 'c', Empty))) emptyenv;; 
+
+
+sem (Cons (Cons (Cons(Echar 'c',Empty)) , (Cons (Eint 2 , Empty), Empty))) emptyenv;;
+
+
+ sem (Cons(Cons(Echar 'c',Empty) , ( Cons (Cons (Eint 2 , Empty), Empty)))) emptyenv;;
+
+
+ sem (Cons(  Cons (Eint 3 , Empty),
+
+
+            ( Cons (Cons (Eint 2 , Empty), Empty)))) emptyenv;;
+
+
+
+fun x -> x +1 = fun x -> x+1;;
+
+
+
+sem (Fun (Eint 3, emptyenv)) emptyenv;;
+
+
+
+sem (Appl( Rec(Ide "y", Fun( Ide "x", 
+                               Ifthenelse( (Eq(Val (Ide "x"), Eint 0) ),
+                               Empty,
+                                           Cons( Val (Ide "x"), 
+                                                Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
+                                              )
+                                         ))),  Eint 500)) emptyenv;;
+sem (Appl(list, Eint 500)) emptyenv;;
+
+
+
+sem  (Cons ((Cons (Eint 2, Empty)),(Cons (Empty, Empty)))) emptyenv;;
+
+ (Cons ((Cons (Eint 2, Empty)),(Cons (Empty, Empty))));;
+
+sem (Cons (Empty, Empty)) emptyenv;;
+
+
+[]::[];;
+
+
+sem (Cons (Empty, (Cons (Eint 3, Empty)))) emptyenv;;
+
+sem (Cons ((Cons (Eint 3, Empty)), Empty)) emptyenv;;
+
+sem (Cons(Empty,(Cons (Empty, (Cons (Eint 3, Empty)))))) emptyenv;;

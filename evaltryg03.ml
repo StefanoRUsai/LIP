@@ -55,15 +55,12 @@ exception TypeMismatch ;;
 
 
 
-let emptyenv =  Env(fun x -> Undefined)
+let trasforma (Ide a) = (a:string);;
 
-and bind ((Env r), x, d) = Env (fun y -> if y=x then d else r y)
 
-and 
-applyenv ((Env r),x) = r x ;;
-(*applyenv ((Env r),x) = match r x with
-  Undefined -> raise (UndefinedIde  x)
-  | _ as d -> d;; *) (*vuol dire che ogni eval diverso da  undefined si chiama  d e restituisce d*)
+let rec emptyenv =  Env(fun x -> Undefined)
+and bind (r, x, d) = Env (fun y -> if y=x then d else applyenv  (r,y))
+and applyenv ((Env r),x) = r x ;;
 
 
 let rec evalInt e r = match semtry e r with
@@ -132,8 +129,8 @@ and sub (e,oldV,newV)  = match e with
   | _ -> failwith "Errore nella sostituzione Rec, manca il match completo?"
 
 
-and semtry e r = match e with
-    Eint n -> Int n
+and semtry e r =let rec sem e r pila =  match e with
+   Eint n -> Int n
   | Echar c -> Char c  
   | Val x ->  applyenv (r,x)
   | Sum   (e1,e2) -> Int (evalInt e1 r + evalInt e2 r) 
@@ -141,7 +138,7 @@ and semtry e r = match e with
   | Times (e1,e2) -> Int (evalInt e1 r * evalInt e2 r)
   | True  -> Bool true
   | False -> Bool false
-  | Eq (e1,e2) -> (match semtry e1 r, semtry e2 r with
+  | Eq (e1,e2) -> (match sem e1 r pila, sem e2 r pila with
                        Int a, Int b   -> Bool (a=b) 
                      | Bool a, Bool b -> Bool (a=b) 
                      | Char a, Char b ->  Bool (a=b) 
@@ -151,156 +148,102 @@ and semtry e r = match e with
                      |Undefined, Undefined -> Bool (Undefined=Undefined)
                      |_-> raise TypeMismatch)
   | Less (e1,e2) -> Bool (evalInt e1 r <= evalInt e2 r)
-  | Not ne -> Bool (not (evalBool ne r))
+  | Not ne -> Bool (not (evalBool ne r)) 
   | And (e1,e2) -> Bool (evalBool e1 r && evalBool e2 r)
   | Or (e1,e2) -> Bool (evalBool e1 r || evalBool e2 r)
   | Empty -> List []
-  | Head e1 -> let a = semtry e1 r in 
+  | Head e1 -> let a = sem e1 r pila in 
                let b = (match a with
                         List [] -> failwith "Lista vuota" 
                       | List (hd::tl) -> hd  
                       | _ -> raise TypeMismatch)         
                in b 
-  |Tail e1 -> let a = semtry e1 r in 
+  |Tail e1 -> let a = sem e1 r pila in 
               let b = (match a with
                        List [] -> failwith "Lista vuota" 
                      | List (hd::tl) -> tl  
                      | _ -> raise TypeMismatch)         
               in List b 
-  | Cons (e1, e2) ->(let a = semtry e2 r in 
-                   let b = (match a with                      
-                   |(List l) ->(match l with
-                               [] -> (semtry e1 r)::[]  
-                               |(hd::tl) -> (match semtry e1 r , hd  with
-                                            Int a,  Int  b -> (Int a)::l 
-                                          | Bool a, Bool b -> (Bool a)::l
-                                          | Char a, Char b -> (Char a)::l
-                                          | Pair (a,b), Pair (c,d) -> (Pair (a,b))::l
-                                          | Closure (a,b), Closure (c,d) -> (Closure (a,b))::l
-                                          | List a,List b -> (List a)::l 
-                                          | Undefined, Undefined -> (Undefined)::l
-                                          |_ -> raise TypeMismatch))
-                      |_ -> raise TypeMismatch)                        
-                   in  List b )
-  |Epair (e1,e2) -> Pair ( semtry e1 r, semtry e2 r)
-  |Fst e -> ( match (semtry e r) with
+   | Cons (e1, e2) ->(let a = sem e2 r pila in 
+      let b = (match a with                     
+      |(List l) ->(match l with
+                   [] -> (sem e1 r pila)::[]  
+                  |(hd::tl) -> (match sem e1 r pila , hd  with
+                                 Int a,  Int  b -> (Int a)::l 
+                                 | Bool a, Bool b -> (Bool a)::l
+                                 | Char a, Char b -> (Char a)::l
+                                 | Pair (Int a , Int b), Pair (Int c , Int d) -> (Pair (Int a,Int b))::l
+                                 | Pair (Bool a , Bool b), Pair (Bool c , Bool d) -> (Pair (Bool a, Bool b))::l
+                                 | Pair (Char a , Char b), Pair (Char c , Char d) -> (Pair (Char a, Char b))::l                                  
+                                 | Pair (Int a , Char b), Pair (Int c , Char d) -> (Pair (Int a , Char b))::l
+                                 | Pair (Bool a , Char b), Pair (Bool c , Char d) -> (Pair (Bool a , Char b))::l
+                                 | Pair (Int a , Bool b), Pair (Int c , Bool d) -> (Pair(Int a , Bool b))::l
+                                 | Pair (Char a , Bool b), Pair (Char c , Bool d) -> (Pair  (Char a , Bool b))::l 
+                                 | Pair (Bool a , Int b), Pair (Bool c , Int d) -> (Pair (Bool a , Int b))::l
+                                 | Pair (Char a , Int b), Pair (Char c , Int d) -> (Pair (Char a , Int b))::l                                  
+                                 | _ as a,  List b -> (match a, List.hd b with
+                                        List [Int a],  Int  b -> (List [Int a])::l 
+                                      | List [Bool a], Bool b -> (List [Bool a])::l
+                                      | List [Char a], Char b -> (List [Char a])::l                                      
+                                      | List [Pair (Int a , Int b)], Pair (Int c , Int d) -> (List [Pair (Int a , Int b)])::l
+                                      | List [Pair (Bool a , Bool b)], Pair (Bool c , Bool d) -> (List [Pair (Bool a , Bool b)])::l
+                                      | List [Pair (Char a , Char b)], Pair (Char c , Char d) -> (List [Pair (Char a , Char b)])::l                                  
+                                      | List [Pair (Int a , Char b)], Pair (Int c , Char d) -> ( List [Pair (Int a , Char b)])::l
+                                      | List [Pair (Bool a , Char b)], Pair (Bool c , Char d) -> (List [Pair (Bool a , Char b)])::l
+                                      | List [Pair (Int a , Bool b)], Pair (Int c , Bool d) -> ( List [Pair (Int a , Bool b)])::l
+                                      | List [Pair (Char a , Bool b)], Pair (Char c , Bool d) -> (List [Pair (Char a , Bool b)])::l 
+                                      | List [Pair (Bool a , Int b)], Pair (Bool c , Int d) -> (List [Pair (Bool a , Int b)])::l
+                                      | List [Pair (Char a , Int b)], Pair (Char c , Int d) -> (List [Pair (Char a , Int b)])::l                                     
+                                      |_-> failwith "errore liste di liste sem")
+                                 | Undefined, Undefined -> (Undefined)::l
+                                 |_ -> failwith "Errore liste"))
+                      |_ -> failwith "errore liste 2")
+                      in  List b )
+
+  |Epair (e1,e2) -> Pair ( sem e1 r pila, sem e2 r pila) 
+  |Fst e -> ( match (sem e r pila) with
            Pair (a, b) -> a
               |_-> raise TypeMismatch)
-  |Snd e -> ( match (semtry e r) with
+  |Snd e -> ( match (sem e r pila) with
            Pair (a, b) -> b
-          |_-> raise TypeMismatch)
-  | Ifthenelse(e0,e1,e2) -> if evalBool e0 r then semtry e1 r else semtry e2 r
-  | Let (x,e1,e2) -> semtry e2 (bind (r,x,(semtry e1 r)))
+          |_-> raise TypeMismatch) 
+  | Ifthenelse(e0,e1,e2) -> if evalBool e0 r then sem e1 r pila else sem e2 r pila
+  | Let (x,e1,e2) -> sem e2 (bind (r,x,(sem e1 r pila))) pila
   | Rec(y,(Fun(x,e1))) -> 
           let newValue = (sub (e1,y,(Rec(y,Fun(x,e1))))) in
             Closure(Fun(x,newValue), controllerFV (newValue,r,emptyenv)) 
-  | Fun (x,e1) -> Closure ((Fun(x,e1)), controllerFV (e1,r,emptyenv))
-  | Appl (e1,e2) -> (match semtry e1 r with
-                Closure ((Fun(x,f)),d) -> (semtry f (bind (d,x,(semtry e2 r))))
+  | Fun (x,e1) -> Closure ((Fun(x,e1)), controllerFV (e1,r,emptyenv)) 
+  | Appl (e1,e2) -> (match sem e1 r pila with
+                Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(semtry e2 r))) pila)
                | _ -> failwith "coddati")  
-  | Try (e1,ide,e2) -> (try (semtry e1 (controllerFV (e1,r,emptyenv))) with 
-                          |UndefinedIde id -> if id=ide then semtry e2 r else 
-                             failwith "errore brutto brutto")
-  | Raise ide -> raise (UndefinedIde ide)
+
+  | Try (e1,i,e2) -> sem e1 r ((i,e2)::pila)
+  
+  | Raise id -> let (n, s) = controllerTry id pila in sem n r s
   |_-> failwith "problema guard per via del rec in sem"     
-;;
 
-let a = Let(Ide "x", (Try
-                        (Ifthenelse (False,Eint 3,Raise (Ide "prova"))),
-               (Ide "prova"),
-               Eint 69)),
-      Val (Ide "x");;
-
-semtry (Try (Ifthenelse (False,Eint 3,(Raise (Ide "prova")))))::
-semtry a emptyenv;;
+in sem e r ([]:(ide*exp)list)
 
 
- 
- sem (Fun(Ide "x", Sum(Val(Ide "x"), Eint 1))) emptyenv;;
- sem(Times(Eint 4,Eint 5))  emptyenv;;
- sem(Eq(Eint 2,Eint 4))  emptyenv;;
- sem(Eq(Eint 2,Eint 2))  emptyenv;;
- sem(Times(Eint 3,Eint 4))  emptyenv;;
- sem(Sum(Eint 3,Eint 2))  emptyenv;;
- sem(Diff(Eint 5,Eint 3))  emptyenv;;
- sem(Diff(Eint 5,Eint 8)) emptyenv;;    
- sem(And(True,False))  emptyenv;;
- sem(And(True,True))  emptyenv;;
- sem(And(False,True))  emptyenv;;
- sem(And(False,False))  emptyenv;;
- sem(Or(True,False))  emptyenv;;
- sem(Or(True,True))  emptyenv;;
- sem(Or(False,True))  emptyenv;;
- sem(Or(False,False))  emptyenv;;     
- sem(Less(Eint 5,Eint 3))  emptyenv;;
- sem(Less(Eint 3,Eint 5))  emptyenv;;
- sem(Not(True))  emptyenv;;
- sem(Not(False))  emptyenv;;
- sem(True) emptyenv;;
- sem(False) emptyenv;;
- sem(Empty) emptyenv;;
- sem(Fst(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;
- sem(Snd(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;    
- sem(Fst(Sum(Eint 2, Eint 3))) emptyenv;; (* errore, ma non mi torna il test*)
- sem(Sum(Eint 2,Eint 3)) emptyenv;;     
- sem ((Cons(Eint 4,Cons(Eint 2,(Cons(Eint 1,Empty)))))) emptyenv;;
- sem ((Head(Cons(Eint 2,(Cons(Eint 1,Empty)))))) emptyenv;;
- sem ((Head(Cons(Eint 2,Empty)))) emptyenv;;
- sem(Head(Empty)) emptyenv;;
- sem ((Tail((Cons(Eint 3,Cons(Eint 2,(Cons(Eint 1,Empty)))))))) emptyenv;;   
- sem ((Tail(Cons(Eint 10,Empty)))) emptyenv;;
- sem (Tail(Empty)) emptyenv;;    
-
-let a = (Fst(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) )));;
-let b =(Snd(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) )));;
-
-
-sem (Eq(a,b)) emptyenv;;
-
-sem (Fst(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;
-sem (Snd(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;
-
-
-
-let e1 = Rec(Ide "fact",Let(Ide "fact",
-		Fun(Ide "x", 
-		    Ifthenelse(Eq(Val(Ide "x"),Eint 0),
-		       Eint 1, 
-		       Times(Val(Ide "x"),
-			   Appl(Val(Ide "fact"),Diff(Val(Ide "x"), Eint 1))))),
-	       Appl(Val(Ide "fact"),Eint 5)));;
+and 
+(*Contolla la lista delle eccezioni, non toccare è fragile !!!!! *)
+controllerTry n s = match s with
+    [] -> failwith "Eccezione non presente nello stack"
+  | (a,b)::tl -> if a = n then (b,tl) else controllerTry n tl;;
 
 
 
 
-semtry (Try(Raise (Ide "x"),(Ide "x"),Eint 10)) emptyenv;;
-
-
-
-let e1 = Let(Ide "fact",
-             Rec(Ide "fact", 
-		Fun(Ide "x",  Ifthenelse(
-                      Eq(Val(Ide "x"),Eint 0), 
-                      Eint 1, 
-                      Times(Val(Ide "x"), Appl(Val(Ide "fact"),Diff(Val(Ide "x"),Eint 1)))
-                    ))),
-	       Appl(Val(Ide "fact"),Eint 5));;
- 
-sem e1 emptyenv;;
-
-
-
-let a = Let(Ide "succ", 
-             Fun(Ide "x", (Ifthenelse
-                   ( Eq (Val(Ide "x"), Eint 0), Eint 2, Eint 3))), 
-             Appl(Val(Ide "succ"), Eint 8));;
-
-
-semtry (Try(Raise (Ide "x"),(Ide "x"),Eint 10)) emptyenv;;
-
-
-
-
-
-semtry a emptyenv;;
-
+semtry(
+  Try(    
+    (Try (
+       (Ifthenelse( Eq(Val (Ide "x"), Echar 'c'),
+        Raise (Ide "ecc1"),
+        Raise (Ide "ecc2")
+              )),
+            Ide "ecc2",
+            Eint 3)),
+           Ide "ecc1",
+           Eint 4)
+)
+(bind (emptyenv,(Ide "x"), Char 'c'));;
