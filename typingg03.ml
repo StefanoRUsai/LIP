@@ -195,22 +195,22 @@ let rec occurs name typ = match typ with
  
 let rec unify  l = match l with
   [] -> []
-  |hd::tl ->( match hd with
+  |hd::tl  ->( match hd with
                   t1,t2 -> (match t1,t2 with
                     (TInt,TInt) -> unify tl
                   |(Tchar,Tchar) -> unify tl               
                   |(TBool,TBool) -> unify tl
-                  |(TVar n, x)  ->
-                     if (occurs n t2) then failwith "Controllo verifica"
+                  |(TVar a, TVar b) -> if a = b then unify tl else unify tl@[hd]
+                  |(TVar n, _)  ->
+                     if occurs n t2 then failwith "Controllo verifica"
                      else (t1,t2)::(unify (subst tl n t2))
-                  |(TVar n, x)  ->
-                     if (occurs n t1) then failwith "Controllo verifica"
+                  |(_, TVar n)  ->
+                     if  occurs n t1  then failwith "Controllo verifica"
                      else (t1,t2)::(unify (subst tl n t1))
                   |(TFun(t3,t4),TFun(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
                   |(TPair(t3,t4),TPair(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
                   | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
-                  | _ ->  l)
-            );; 
+                  | _ ->  hd::tl));; 
 
 let rec typeCheck e t1 t2 = match e with
     TInt -> TInt
@@ -238,3 +238,13 @@ typeinf (Sum (Eint 2, Eint 3));;
 
 
 tconst (Sum (Eint 2, Eint 3)) newtypenv;;
+
+
+typeinf (Eq(Appl(Fun(Ide "x", Val( Ide "x")), Eint 2), Appl(Rec(Ide "x", Fun(Ide "y", Sum(Val(Ide "y"), Eint 2))), Eint 2)));;
+
+
+
+
+typeinf ( Rec(Ide "y", (Fun(Ide "x", Sum(Val (Ide "x"), Appl(Val (Ide "y"), Diff(Val (Ide "x"), Eint 1)))))));
+
+
