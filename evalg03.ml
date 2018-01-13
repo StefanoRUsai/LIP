@@ -140,7 +140,7 @@ and sem e r = match e with
                      | Char a, Char b ->  Bool (a=b) 
                      | List a, List b -> Bool (a=b)
                      | Pair(a,b), Pair (c,d) -> Bool (a=c&&b=d)
-                     | Closure(a,b), Closure (c,d) -> Bool (a=c&&b=d)    
+                     | Closure(a,b), Closure (c,d) -> Bool (a=c&&b==d)    
                      |Undefined, Undefined -> Bool (Undefined=Undefined)
                      |_-> raise TypeMismatch)
   | Less (e1,e2) -> Bool (evalInt e1 r < evalInt e2 r)
@@ -190,10 +190,10 @@ and sem e r = match e with
                                       | List [Pair (Char a , Bool b)], Pair (Char c , Bool d) -> (List [Pair (Char a , Bool b)])::l 
                                       | List [Pair (Bool a , Int b)], Pair (Bool c , Int d) -> (List [Pair (Bool a , Int b)])::l
                                       | List [Pair (Char a , Int b)], Pair (Char c , Int d) -> (List [Pair (Char a , Int b)])::l                                     
-                                      | List [], _ as c -> failwith "non posso collegare liste vuote a liste piene"
-                                      |_ as c, List []-> c::l
-                                      |_-> failwith "errore liste di liste sem")
+                                      |_-> failwith "errore liste di liste sem")                              
                                  | Undefined, Undefined -> (Undefined)::l
+                                 | Closure ((_ as a) ,(_ as b)), Closure (_, _) -> Closure (a,b)::l
+                                 | List [], _ -> l 
                                  |_ -> failwith "Errore liste"))
                       |_ -> failwith "errore liste 2")
                       in  List b )
@@ -214,221 +214,7 @@ and sem e r = match e with
                 Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(sem e2 r))))  
                | _ -> failwith "coddati")
   |_-> failwith "sem rec madonna, matcha male come negli altri casi"
-
 ;;
-
-let e0 = Let(
-  Ide "succ",
-  Fun(Ide "x", Sum(Val(Ide "x"), Eint 1)),
-  Appl(Val(Ide "succ"),Eint 8));;
-
-let prova1 = sem e0 emptyenv ;;
-assert (if not  (prova1 = Int 9) then print_endline "deva dare 9";  (prova1 = Int 9));;
-
-let a = Sum (Eint 2, Eint 3);;
-
-let e1 = Rec(Ide "y", Let(Ide "x",Fun(Ide "x", Sum(Val(Ide "x"), Eint 1)),Appl(Val(Ide "x"),Eint 8)));;
- 
-sem e1 emptyenv;;
- 
- sem (Fun(Ide "x", Sum(Val(Ide "x"), Eint 1))) emptyenv;;
- sem(Times(Eint 4,Eint 5))  emptyenv;;
- sem(Eq(Eint 2,Eint 4))  emptyenv;;
- sem(Eq(Eint 2,Eint 2))  emptyenv;;
- sem(Times(Eint 3,Eint 4))  emptyenv;;
- sem(Sum(Eint 3,Eint 2))  emptyenv;;
- sem(Diff(Eint 5,Eint 3))  emptyenv;;
- sem(Diff(Eint 5,Eint 8)) emptyenv;;    
- sem(And(True,False))  emptyenv;;
- sem(And(True,True))  emptyenv;;
- sem(And(False,True))  emptyenv;;
- sem(And(False,False))  emptyenv;;
- sem(Or(True,False))  emptyenv;;
- sem(Or(True,True))  emptyenv;;
- sem(Or(False,True))  emptyenv;;
- sem(Or(False,False))  emptyenv;;     
- sem(Less(Eint 5,Eint 3))  emptyenv;;
- sem(Less(Eint 3,Eint 5))  emptyenv;;
- sem(Not(True))  emptyenv;;
- sem(Not(False))  emptyenv;;
- sem(True) emptyenv;;
- sem(False) emptyenv;;
- sem(Empty) emptyenv;;
- sem(Fst(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;
- sem(Snd(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;    
- sem(Fst(Sum(Eint 2, Eint 3))) emptyenv;; (* errore, ma non mi torna il test*)
- sem(Sum(Eint 2,Eint 3)) emptyenv;;     
- sem ((Cons(Eint 4,Cons(Eint 2,(Cons(Eint 1,Empty)))))) emptyenv;;
- sem ((Head(Cons(Eint 2,(Cons(Eint 1,Empty)))))) emptyenv;;
- sem ((Head(Cons(Eint 2,Empty)))) emptyenv;;
- sem(Head(Empty)) emptyenv;;
- sem ((Tail((Cons(Eint 3,Cons(Eint 2,(Cons(Eint 1,Empty)))))))) emptyenv;;   
- sem ((Tail(Cons(Eint 10,Empty)))) emptyenv;;
- sem (Tail(Empty)) emptyenv;;    
-
-let a = (Fst(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) )));;
-let b =(Snd(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) )));;
-
-
-sem (Eq(a,b)) emptyenv;;
-
-sem (Fst(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;
-sem (Snd(Epair( Sum(Eint 5,Eint 3) , Diff(Eint 5,Eint 3) ))) emptyenv;;
-
-
-
-let e1 = Rec(Ide "fact",Let(Ide "fact",
-		Fun(Ide "x", 
-		    Ifthenelse(Eq(Val(Ide "x"),Eint 0),
-		       Eint 1, 
-		       Times(Val(Ide "x"),
-			   Appl(Val(Ide "fact"),Diff(Val(Ide "x"), Eint 1))))),
-	       Appl(Val(Ide "fact"),Eint 5)));;
-
-sem e1 emptyenv;;
-
-
-let a =emptyenv;;
-
-let b = bind (a,(Ide "x"), Int 2);;
-
-applyenv (b,(Ide "x"));;
-
-
-
-let e1 = Let(Ide "fact",
-             Rec(Ide "fact", 
-		Fun(Ide "x",  Ifthenelse(
-                      Eq(Val(Ide "x"),Eint 0), 
-                      Eint 1, 
-                      Times(Val(Ide "x"), Appl(Val(Ide "fact"),Diff(Val(Ide "x"),Eint 1)))
-                    ))),
-	       Appl(Val(Ide "fact"),Eint 5));;
- 
-sem e1 emptyenv;;
-
-let e0 =Rec (Ide "y", 
-                Fun (Ide "y", 
-                   Ifthenelse(  Eq(Val(Ide "y"),Eint 0), 
-                                         Eint 1, 
-                                         Times (Val (Ide "y"), Appl (Val (Ide "y"), Eint 2)))));;
-
-
-sem e0 emptyenv;;
-
-
-let e0 =Let (Ide "prova", 
-             Rec (Ide "y", 
-                Fun (Ide "y", 
-                   Ifthenelse(  Eq(Val(Ide "y"),Eint 0), 
-                                         Eint 1, 
-                                         Times (Val (Ide "y"), Appl (Val (Ide "y"), Eint 2))))), 
-             Appl(Val (Ide "prova"), Val (Ide "y")));;
-
-let e1 = Appl( Fun ( Ide "x", Sum (Val (Ide "x"), Eint 3)), Eint 5);; 
-sem e1 emptyenv;;
-
-let e3 = Rec (
-              (Ide "y"),
-               Appl( Fun ((Ide "x"), 
-                          Ifthenelse(  Eq(Val(Ide "y"), Eint 0),  
-                          Sum (Val (Ide "x"), Eint 1),                                             
-                          Diff((Appl(Val (Ide "y"), Eint 3)), Eint 1))), 
-               Eint 1));;
-
-sem e3 emptyenv;;
-
-let recurs = Rec(Ide "y", Fun( Ide "x", 
-                               Ifthenelse( (Eq(Val (Ide "x"), Eint 0) ),
-                               (Eint 1),
-                                           Sum( Eint 2, 
-                                                Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
-                                              )
-                                         )));;
-sem recurs emptyenv;;
-sem (Appl(recurs, Eint 2)) emptyenv;;
-
-
-
-let list = Rec(Ide "y", Fun( Ide "x", 
-                               Ifthenelse( (Eq(Val (Ide "x"), Eint 0) ),
-                               Empty,
-                                           Cons( Val (Ide "x"), 
-                                                Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
-                                              )
-                                         )));;
-sem (Appl(list, Eint 500)) emptyenv;;
-
-sem (Appl(list, Eint 100)) emptyenv;;
-
-sem (Times(Eint 10, Eint 15)) emptyenv;;
-
-
-
-let list=Rec (Ide "y",
-   Fun (Ide "x",
-    Ifthenelse (Eq (Val (Ide "x"), Eint 0), Empty,
-     Cons (Val (Ide "x"), Appl (Val (Ide "y"), Diff (Val (Ide "x"), Eint 1))))));;
-
-sem (Appl(list, Eint 10)) emptyenv;;
-
-
-let prova= Fun (Ide "x", Not (Val (Ide "x")));; 
-let prova2 =  Let(Ide "x", Fun (Ide "x", Not (Val (Ide "x"))), Appl(Val (Ide "x"), True));;
-
-sem prova2 emptyenv;;
-
-
-
-fun x -> x+1=fun x -> x+1;;
-
-sem (Cons((Epair (Eint 2, Echar 'x')), (Cons ((Epair (Eint 2, Echar 'x')), Empty)))) emptyenv;;
-sem (Cons((Epair (Eint 2, Eint 2)), (Cons ((Epair (Eint 2, Echar 'x')), Empty)))) emptyenv;;
-
-sem (Epair (Eint 2, Echar 'x')) emptyenv;;
-sem (Cons (Cons (Eint 2 , Empty)),  (Cons (Echar 'c', Empty))) emptyenv;; 
-
-
-sem (Cons (Cons (Cons(Echar 'c',Empty)) , (Cons (Eint 2 , Empty), Empty))) emptyenv;;
-
-
- sem (Cons(Cons(Echar 'c',Empty) , ( Cons (Cons (Eint 2 , Empty), Empty)))) emptyenv;;
-
-
- sem (Cons(  Cons (Eint 3 , Empty),
-
-
-            ( Cons (Cons (Eint 2 , Empty), Empty)))) emptyenv;;
-
-
-
-fun x -> x +1 = fun x -> x+1;;
-
-
-
-sem (Fun (Eint 3, emptyenv)) emptyenv;;
-
-
-
-sem (Appl( Rec(Ide "y", Fun( Ide "x", 
-                               Ifthenelse( (Eq(Val (Ide "x"), Eint 0) ),
-                               Empty,
-                                           Cons( Val (Ide "x"), 
-                                                Appl( Val (Ide "y"), Diff(Val (Ide "x"), Eint 1) )
-                                              )
-                                         ))),  Eint 500)) emptyenv;;
-sem (Appl(list, Eint 500)) emptyenv;;
-
-
-
-sem  (Cons ((Cons (Eint 2, Empty)),(Cons (Empty, Empty)))) emptyenv;;
-
- (Cons ((Cons (Eint 2, Empty)),(Cons (Empty, Empty))));;
-
-sem (Cons (Empty, Empty)) emptyenv;;
-
-
-[]::[];;
 
 
 sem (Cons (Empty, (Cons (Eint 3, Empty)))) emptyenv;;
@@ -436,3 +222,24 @@ sem (Cons (Empty, (Cons (Eint 3, Empty)))) emptyenv;;
 sem (Cons ((Cons (Eint 3, Empty)), Empty)) emptyenv;;
 
 sem (Cons(Empty,(Cons (Empty, (Cons (Eint 3, Empty)))))) emptyenv;;
+
+
+sem (Eq((Fun ((Ide "x"), Sum(Val (Ide "x"), Eint 4))),
+        (Fun ((Ide "x"), Sum(Val (Ide "x"), Eint 4))))) emptyenv;;
+
+sem (Cons( (Fun ((Ide "x"), Sum(Val (Ide "x"), Eint 4))), Empty)) emptyenv;;
+
+
+emptyenv == emptyenv;;
+
+
+
+let prova ev = match ev with
+    (Int _) as a-> if ev = a then true else true
+  |(Bool _) as a-> if ev = a then true else true
+  | (Char _) as a-> if ev = a then true else true
+  | (Pair (_,_)) as a-> if ev = a then true else true
+  | (Closure (_,_)) as a-> if ev = a then true else true
+  |_-> false;;
+
+prova (Bool true);;
