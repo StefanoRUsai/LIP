@@ -34,7 +34,7 @@ type exp =
 type etype =
   TBool
 | TInt
-| TChar
+| Tchar
 | TVar of string
 | TPair of etype * etype
 | TList of etype list
@@ -81,7 +81,7 @@ let rec  tconst e tr = match e with
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TInt); (t2,TInt)] in
     (TInt, c @ c1 @ c2)
-  |Echar c -> (TChar,[])
+  |Echar c -> (Tchar,[])
   |True | False -> (TBool, [])
   |Empty -> (TList [newvar()] ,[])
   |And (e1,e2)|Or (e1,e2) -> 
@@ -165,7 +165,7 @@ let rec  tconst e tr = match e with
 
 let rec subst_app t0 i t = match t0 with
     TInt -> TInt
-  | TChar -> TChar
+  | Tchar -> Tchar
   | TBool -> TBool
   | TVar y -> if y=i then t else TVar y
   | TFun (t1,t2) -> TFun (subst_app t1 i t, subst_app t2 i t)
@@ -181,7 +181,7 @@ let rec subst l i t = match l with
   | (t1,t2)::tl -> (subst_app t1 i t, subst_app t2 i t)::(subst tl i t)
 
 let rec occurs name typ = match typ with
-  TInt | TBool |TChar -> false
+  TInt | TBool |Tchar -> false
 | TVar n1 -> n1=name
 | TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
 | TFun (t1,t2) -> (occurs name t1) || (occurs name t2)
@@ -197,7 +197,7 @@ let rec unify  l = match l with
   |hd::tl  ->( match hd with
                   t1,t2 -> (match t1,t2 with
                     (TInt,TInt) -> unify tl
-                  |(TChar,TChar) -> unify tl               
+                  |(Tchar,Tchar) -> unify tl               
                   |(TBool,TBool) -> unify tl
                   |(TVar a, TVar b) -> if a = b then unify tl else unify tl@[hd]
                   |(TVar n, _)  ->
@@ -211,11 +211,22 @@ let rec unify  l = match l with
                   | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
                   | _ ->  hd::tl));; 
 
+let rec typeCheck e t1 t2 = match e with
+    TInt -> TInt
+  | TBool -> TBool
+  | Tchar -> Tchar
+  | TVar n -> if n = t1 then t2 else TVar n
+  | TFun (t3,t4) -> TFun (typeCheck t3 t1 t2 , typeCheck t4 t1 t2)
+  | TPair(t3,t4) -> TPair (typeCheck t3 t1 t2, typeCheck t4 t1 t2)
+  | TList [l] -> TList [typeCheck l t1 t2]
+  | _ -> failwith "Errore type check";;
+
+
 
 let rec typeinf e =
   let rec resolve t s = (match s with
     [] -> t
-  |(TVar x, t1)::s1  | (t1, TVar x )::s1 -> resolve (subst_app t x t1) s1      
+  |(TVar x, t1)::s1  | (t1, TVar x )::s1 -> resolve (typeCheck t x t1) s1      
   | _ -> failwith ("non riesco a fare infeerenza")) in
   let (t,c) = tconst e newtypenv in
   resolve t (unify c)
@@ -236,9 +247,7 @@ typeinf (Eq(Appl(Fun(Ide "x", Val( Ide "x")), Eint 2), Appl(Rec(Ide "x", Fun(Ide
 typeinf ( Rec(Ide "y", (Fun(Ide "x", Sum(Val (Ide "x"), Appl(Val (Ide "y"), Diff(Val (Ide "x"), Eint 1)))))));;
 
 
-typeinf (Cons (Eint 3, Empty)) ;;
-
-
+typeinf (Epair(Eint 3, Empty)) ;;
 
 typeinf  (Appl(Rec (Ide "y",
                     Fun (Ide "x",
