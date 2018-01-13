@@ -58,8 +58,7 @@ let newtypenv = ([]:(ide*etype)list);;
 (*assolutamente da rivedere*)
 let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e with
     [] -> failwith "ambiente vuoto"
- |  ((Ide a),(b:etype))::[] -> if a = i then b else failwith "ambiente vuoto"
-  |  ((Ide a),(b:etype))::tl -> if a = i then b else applytypenv tl (Ide i);;
+ |  ((Ide a),(b:etype))::tl -> if a = i then b else applytypenv tl (Ide i);;
   
 
 (*associa un tipo e un identificatore all'ambiente dei tipi*)
@@ -245,6 +244,8 @@ typeinf (Eq(Appl(Fun(Ide "x", Val( Ide "x")), Eint 2), Appl(Rec(Ide "x", Fun(Ide
 
 
 
-typeinf ( Rec(Ide "y", (Fun(Ide "x", Sum(Val (Ide "x"), Appl(Val (Ide "y"), Diff(Val (Ide "x"), Eint 1)))))));
+typeinf ( Rec(Ide "y", (Fun(Ide "x", Sum(Val (Ide "x"), Appl(Val (Ide "y"), Diff(Val (Ide "x"), Eint 1)))))));;
 
+
+typeinf (Cons (Eint 3, Empty)) ;;
 
