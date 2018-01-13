@@ -107,13 +107,12 @@ let rec  tconst e tr = match e with
      let (t2, c2) = tconst e2 tr in
      let c =  [ (t1,t1) ; (t2, TList [t1]) ] in
        (TList [t1],c@c1@c2)  
- |Head (Cons (e1,e2)) -> 
-     let (t1, c1) = tconst e1 tr in
-     let c = [(t1, (TList [t1]))] in
-     (t1, c@c1)
-  |Tail e1 -> 
-     let (t1, c1) = tconst e1 tr in
-       (t1, c1)
+ | Head l -> 
+      let (TList [t1], c1) =  tconst l  tr
+        in (t1, ([(TList [t1], TList [t1])]@c1)) 
+  | Tail l ->
+      let (t1,c1) =  tconst l tr
+        in (t1, c1)
   |Epair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
@@ -245,6 +244,9 @@ typeinf (Eq(Appl(Fun(Ide "x", Val( Ide "x")), Eint 2), Appl(Rec(Ide "x", Fun(Ide
 
 
 typeinf ( Rec(Ide "y", (Fun(Ide "x", Sum(Val (Ide "x"), Appl(Val (Ide "y"), Diff(Val (Ide "x"), Eint 1)))))));;
+
+typeinf (Head(Cons(Eint 3,Empty)));;
+tconst (Tail(Cons(Eint 3,Empty))) newtypenv;;
 
 
 typeinf (Epair(Eint 3, Empty)) ;;
