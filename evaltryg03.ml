@@ -139,12 +139,12 @@ and semtry e r =let rec sem e r pila =  match e with
   | True  -> Bool true
   | False -> Bool false
   | Eq (e1,e2) -> (match sem e1 r pila, sem e2 r pila with
-                       Int a, Int b   -> Bool (a=b) 
+                        Int a, Int b   -> Bool (a=b) 
                      | Bool a, Bool b -> Bool (a=b) 
                      | Char a, Char b ->  Bool (a=b) 
                      | List a, List b -> Bool (a=b)
                      | Pair(a,b), Pair (c,d) -> Bool (a=c&&b=d)
-                     | Closure(a,b), Closure (c,d) -> Bool (a=c&&b=d)    
+                     | Closure(a,b), Closure (c,d) -> Bool (a=c&&b==d)    
                      |Undefined, Undefined -> Bool (Undefined=Undefined)
                      |_-> raise TypeMismatch)
   | Less (e1,e2) -> Bool (evalInt e1 r <= evalInt e2 r)
@@ -169,7 +169,7 @@ and semtry e r =let rec sem e r pila =  match e with
       |(List l) ->(match l with
                    [] -> (sem e1 r pila)::[]  
                   |(hd::tl) -> (match sem e1 r pila , hd  with
-                                 Int a,  Int  b -> (Int a)::l 
+                                    Int a,  Int  b -> (Int a)::l 
                                  | Bool a, Bool b -> (Bool a)::l
                                  | Char a, Char b -> (Char a)::l
                                  | Pair (Int a , Int b), Pair (Int c , Int d) -> (Pair (Int a,Int b))::l
@@ -181,7 +181,7 @@ and semtry e r =let rec sem e r pila =  match e with
                                  | Pair (Char a , Bool b), Pair (Char c , Bool d) -> (Pair  (Char a , Bool b))::l 
                                  | Pair (Bool a , Int b), Pair (Bool c , Int d) -> (Pair (Bool a , Int b))::l
                                  | Pair (Char a , Int b), Pair (Char c , Int d) -> (Pair (Char a , Int b))::l                                  
-                                 | _ as a,  List b -> (match a, List.hd b with
+                                 | _ as a,  List b -> (match a, (testa  b) with
                                         List [Int a],  Int  b -> (List [Int a])::l 
                                       | List [Bool a], Bool b -> (List [Bool a])::l
                                       | List [Char a], Char b -> (List [Char a])::l                                      
@@ -194,12 +194,13 @@ and semtry e r =let rec sem e r pila =  match e with
                                       | List [Pair (Char a , Bool b)], Pair (Char c , Bool d) -> (List [Pair (Char a , Bool b)])::l 
                                       | List [Pair (Bool a , Int b)], Pair (Bool c , Int d) -> (List [Pair (Bool a , Int b)])::l
                                       | List [Pair (Char a , Int b)], Pair (Char c , Int d) -> (List [Pair (Char a , Int b)])::l                                     
-                                      |_-> failwith "errore liste di liste sem")
+                                      |_-> failwith "errore liste di liste sem")                              
                                  | Undefined, Undefined -> (Undefined)::l
+                                 | Closure ((_ as a) ,(_ as b)), Closure (_, _) -> Closure (a,b)::l
+                                 | List [], _ -> l 
                                  |_ -> failwith "Errore liste"))
                       |_ -> failwith "errore liste 2")
                       in  List b )
-
   |Epair (e1,e2) -> Pair ( sem e1 r pila, sem e2 r pila) 
   |Fst e -> ( match (sem e r pila) with
            Pair (a, b) -> a
