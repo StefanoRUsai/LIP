@@ -162,7 +162,7 @@ and semtry e r =let rec sem e r pila =  match e with
                      | Bool a, Bool b -> Bool (a=b) 
                      | Char a, Char b ->  Bool (a=b) 
                      | List a, List b -> Bool (a=b)
-                     | Pair(a,b), Pair (c,d) -> if  (typeCheckEq (a,c) &&  typeCheckEq (c,d))
+                     | Pair(a,b), Pair (c,d) -> if  (typeCheckEq (a,c) &&  typeCheckEq (b,d))
                        then  Bool (a=c&&b=d) else failwith "le coppie non sono dello stesso tipo"
                      | Closure(a,b), Closure (c,d) -> Bool (a=c&&b==d)    
                      |Undefined, Undefined -> Bool (Undefined=Undefined)
