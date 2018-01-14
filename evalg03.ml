@@ -59,6 +59,21 @@ and applyenv ((Env r),x) = r x ;;
 
 
 
+(* serve per controllare il tipo delle coppie 
+nell'eq dell'Epair*)
+let rec typeCheckEq (a,b) = match a,b with
+      Undefined, Undefined -> true
+  | Int _,Int _ -> true 
+  | Bool _, Bool _ -> true 
+  | Char _, Char _ -> true
+  | List _, List _ -> true
+  | Pair (_,_), Pair (_,_) -> true
+  | Closure  (_,_), Closure  (_,_)-> true
+  |_-> failwith "non sono uguali, inutile che ci tenti";;
+
+
+(*funzione di appoggio per controllare la testa di una lista vuota 
+List.hd lancia eccezione non va bene*)
 
 let rec testa lista = match lista with
     []-> sem Empty emptyenv
@@ -139,7 +154,8 @@ and sem e r = match e with
                      | Bool a, Bool b -> Bool (a=b) 
                      | Char a, Char b ->  Bool (a=b) 
                      | List a, List b -> Bool (a=b)
-                     | Pair(a,b), Pair (c,d) -> Bool (a=c&&b=d)
+                     | Pair(a,b), Pair (c,d) -> if  (typeCheckEq (a,c) &&  typeCheckEq (c,d))
+                       then  Bool (a=c&&b=d) else failwith "le coppie non sono dello stesso tipo"
                      | Closure(a,b), Closure (c,d) -> Bool (a=c&&b==d)    
                      |Undefined, Undefined -> Bool (Undefined=Undefined)
                      |_-> raise TypeMismatch)
@@ -216,6 +232,9 @@ and sem e r = match e with
   |_-> failwith "sem rec madonna, matcha male come negli altri casi"
 ;;
 
+sem  (Eq(Epair(Eint 2, Echar 'c'),Epair(Echar 'd', Eint 3))) emptyenv;;
+
+(2,'c')=('d',3);;
 
 sem (Cons (Empty, (Cons (Eint 3, Empty)))) emptyenv;;
 
