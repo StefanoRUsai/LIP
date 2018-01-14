@@ -1,5 +1,4 @@
 (* Progetto gruppo con identificativo g03*)
-(*#use evalg03.ml;;*)
 (*Tipi exp, espressioni di dati astratti  eterogeni*)
 
 type ide = Ide of string;;
@@ -35,192 +34,215 @@ type exp =
 type etype =
   TBool
 | TInt
-| Tchar
+| TChar
 | TVar of string
 | TPair of etype * etype
 | TList of etype list
 | TFun of etype * etype;;
 
 (* USARE I PUNTATORI IN OCAML*)
-(* puntatore per nuova variabile con reference*)
+(* puntatore per nuova variabile con reference?*)
+
+(* queste 2 funzioni creano ununa nuova variabile, secondo specifiche di progetto*)
+
 let nextsym = ref (-1);;
-(* creazione nuova variabile tramite il sistema puntatore*)
 let newvar = fun () -> nextsym := !nextsym + 1 ;
   TVar ("?T" ^ string_of_int (!nextsym));;
 
 (* FUNZIONI PER L?AMBIENTE DEI TIPI*)
-(*crea l'ambiente dei tipi vuoto*)
+(*crea l'ambiente dei tipi vuoto, vedere specifiche del progetto*)
 let newtypenv = ([]:(ide*etype)list);;
 
-(*applica il tipo all'ambiente, restituendo un tipo...*)
-(*assolutamente da rivedere*)
-let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e,i with
-    [],_ -> failwith "ambiente vuoto" 
-  |  ((Ide a),(b:etype))::tl,i -> if a = i then b else applytypenv tl (Ide i);;
+
+(*applica il tipo all'ambiente, restituendo un tipo, vedere specifiche di progetto*)
+let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e with
+    [] -> failwith "ambiente vuoto"
+ |  ((Ide a),(b:etype))::tl -> if a = i then b else applytypenv tl (Ide i);;
   
-
-(*associa un tipo e un identificatore all'ambiente dei tipi*)
-
-let bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =(i,t)::e;; 
+(*associa un tipo e un identificatore all'ambiente dei tipi, vedere specifiche di progeto*)
+let rec bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =match e with
+    []-> (i,t)::[]
+  |(i1,t1)::tl -> if i=i1 then (i1,t)::tl else (i1,t1)::(bindtyp tl i t) ;; 
 
 
 (*vincoli di tipaggio, ci si prova*)
+(*Questa è la  costruzione di un insieme di vincoli per i tipi.
+Il primo argomento è l'espressione da analizzare,  secondo argomento è un ambiente di tipi,
+con tipo (ide * etype) list. Il risultato è un valore di tipo etype * (etype * etype) list,
+in cui il primo elemento è il tipo di espressione e il secondo elemento è l'elenco di vincoli.
+Secondo le specifiche di progetto si interpretano le regole sull'inferenza di tipo*)
 
-
+(*INFERENZA DI TIPO*)
 
 let rec  tconst e tr = match e with
     Eint n ->(TInt,[])
   | Val x -> (applytypenv tr x, [])
-  | Sum   (e1,e2)| Diff  (e1,e2) | Times (e1,e2) ->
-    let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 tr in
-    let c = [(t1,TInt); (t2,TInt)] in
-    (TInt, c @ c1 @ c2)
-  |Echar c -> (Tchar,[])
+  |Echar c -> (TChar,[])
   |True | False -> (TBool, [])
   |Empty -> (TList [newvar()] ,[])
-  |And (e1,e2)|Or (e1,e2) -> 
-    let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 tr in
-    let c = [(t1,TBool); (t2,TBool)] in
-    (TBool, c @ c1 @ c2)
-  |Not e1 ->
-    let (t1,c1) = tconst e1 tr in
-    (TBool, c1)
-  | Eq (e1,e2)->      
-    let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 tr in
-    let c = if t1 = t2 then [(t1,t1); (t2,t2)] else
-    failwith "puoi equiparare solo lo stesso tipo" in
-    (TBool, c @ c1 @ c2)  
-  |Less (e1,e2) ->
-    let (t1,c1) = tconst e1 tr in
+  | Sum   (e1,e2)| Diff  (e1,e2) | Times (e1,e2) ->
+      let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TInt); (t2,TInt)] in
-    (TBool, c @ c1 @ c2)
+      (TInt, c @ c1 @ c2)
+  |And (e1,e2)|Or (e1,e2) -> 
+      let (t1,c1) = tconst e1 tr in
+    let (t2,c2) = tconst e2 tr in
+    let c = [(t1,TBool);(t2,TBool)] in
+      (TBool, c @ c1 @ c2)
+  |Not e1 ->
+     let (t1,c1) = tconst e1 tr in
+      (TBool, [(t1,TBool)]@c1)
+  | Eq (e1,e2)->      
+      let (t1,c1) = tconst e1 tr in
+    let (t2,c2) = tconst e2 tr in
+    let c = [(t1,t2);(t1,t1);(t2,t2)]  in
+      (TBool, c @ c1 @ c2)
+  |Less (e1,e2) ->
+     let (t1,c1) = tconst e1 tr in
+    let (t2,c2) = tconst e2 tr in
+    let c = [(t1,TInt); (t2,TInt)] in
+      (TBool, c @ c1 @ c2)
   |Cons (e1,e2) ->
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
-     let c = [ (t1,t1) ; (t2, TList [t1]) ] in
+     let c =  [ (t1,t1) ; (t2, TList [t1]) ] in
        (TList [t1],c@c1@c2)  
-  |Head e1 -> 
-     let (t1, c1) = tconst e1 tr in
-     let c = [((TList [t1]), (TList [t1]))] in
-     (t1, c@c1)
-  |Tail e1 -> 
-     let (t1, c1) = tconst e1 tr in
-     (t1, c1)
+  | Head l -> 
+      let (TList [t1], c1) =  tconst l  tr
+      in (t1, ([(TList [t1], TList [t1])]@c1)) 
+  | Tail l ->
+      let (t1,c1) =  tconst l tr
+      in (t1, c1)
   |Epair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
-   (TPair(t1,t2), c@c1@c2)
+       (TPair(t1,t2), c@c1@c2)
   |Fst(Epair(e1,e2)) ->
-      let c = (Epair(e1,e2)) in 
-      let (t1,c1) = tconst c tr
-        in (match t1 with
-            (TPair(a,b)) -> (a, ([(TPair(a,b), TPair(a,b))]@
-                     (c1)))
-          | _ -> failwith " errore sulla coppia")
+     let c = (Epair(e1,e2)) in 
+     let (t1,c1) = tconst c tr
+      in (match t1 with
+                (TPair(a,b)) -> (a, ([(TPair(a,b), TPair(a,b))]@(c1)))
+              | _ -> failwith " errore sulla coppia")
   |Snd (Epair (e1,e2)) ->
-      let c = (Epair(e1,e2)) in 
+     let c = (Epair(e1,e2)) in 
       let (t1,c1) = tconst c tr
-        in (match t1 with
-            (TPair(a,b)) -> (b, ([(TPair(a,b), TPair(a,b))]@
-                     (c1)))
-          | _ -> failwith " errore sulla coppia")
+      in (match t1 with
+                (TPair(a,b)) -> (b, ([(TPair(a,b), TPair(a,b))]@(c1)))
+              | _ -> failwith " errore sulla coppia")
   |Ifthenelse (e0,e1,e2) ->
-    let (t0,c0) = tconst e0 tr in
+     let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
     let c = [(t0,TBool); (t1,t2)] in
-    (t1, c @ c0 @ c1 @ c2)
- | Let (x,e1,e2) ->
+      (t1, c @ c0 @ c1 @ c2)
+  | Let (x,e1,e2) ->
+     let tx =newvar () in 
     let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 (bindtyp tr x t1)in
-    (t2, c1 @ c2)
+    let (t2,c2) = tconst e2 (bindtyp tr x tx) in
+    let c = [(t1,tx)] in   
+      (t2, c @ c1 @ c2)
  | Fun (x,e1) ->
-    let tx = newvar() in
+     let tx = newvar() in
     let (t1,c1) = tconst e1 (bindtyp tr x tx) in
-    (TFun (tx,t1), c1)
+      (TFun (tx,t1), c1)
  | Appl (e1,e2) ->
-    let tx = newvar() in
+     let tx = newvar() in
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TFun(t2,tx))] in
-    (tx, c @ c1 @ c2)    
- | Rec (x, Fun(y,z)) -> (* da sistemare*)
-    let tx = newvar() in
-    let (t1,c1) = tconst z (bindtyp tr x tx) in
-    (TFun (tx,t1), c1)
+      (tx, c @ c1 @ c2)    
+ | Rec (x, Fun(i,e)) ->
+     let tx = newvar() in
+    let (t1,c1) = tconst (Fun(i,e)) (bindtyp tr x tx) in
+   (match t1 with
+        TFun (a,b) -> (TFun(a,b), ([(TFun(a,b),tx)]@c1))
+      |_->failwith "varie bestemmie quando non funziona")      
 
-|_-> failwith "errore";;
+ |_-> failwith "errore";;
 
-let rec subst_app t0 i t = match t0 with
-    TInt -> TInt
-  | Tchar -> Tchar
-  | TBool -> TBool
-  | TVar y -> if y=i then t else TVar y
-  | TFun (t1,t2) -> TFun (subst_app t1 i t, subst_app t2 i t)
-  | TPair (t1,t2) ->TPair (subst_app t1 i t, subst_app t2 i t)
-  | TList l -> if l = [TVar i] then TList [t] else TList l
 
-;;
 
-let rec subst l i t = match l with
-    [] -> []
-  | (t1,t2)::tl -> (subst_app t1 i t, subst_app t2 i t)::(subst tl i t)
+(* Funzioni di appoggio per unificare i tipi
+subst_app
+subst
+occurs*)
+
+
+(*  sostituisce un tipo per un identificatore di tipo in un tipo. *)
+(* vecchio tipo, nuovo tipo, etype*)
+let rec subst_app n o e = match e with
+    TInt -> e
+  | TChar -> e
+  | TBool -> e
+  | TVar y -> if y=o then n else TVar y
+  | TFun (t1,t2) -> TFun (subst_app n o t1 , subst_app n o t2)
+  | TPair (t1,t2) ->TPair  (subst_app n o t1 , subst_app n o t2)
+  | TList [l] -> TList [subst_app n o l]
+  |_-> failwith "errore sostituzione";;
+  
+  
+(*sostituisce un tipo per un identificatore di tipo in una lista di vincoli*)
+(*lista vincoli, nuovo tipo, vecchio tipo*)
+let rec subst l n o = List.fold_right (fun (a,b) c -> (subst_app n o a, subst_app n o b)::c) l [];;  
+
+
+(*   dice se il nome di un tipo è verificato *)
 
 let rec occurs name typ = match typ with
-  TInt | TBool |Tchar -> false
-| TVar n1 -> n1=name
-| TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
-| TFun (t1,t2) -> (occurs name t1) || (occurs name t2)
-| TList [TVar l] -> name=l
-|_-> failwith " verifica"
-;;
+    TInt | TBool |TChar -> false
+  | TVar n1 -> n1=name
+  | TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
+  | TFun (t1,t2) -> (occurs name t1) || (occurs name t2)
+  | TList [l] -> (match l with
+                      TVar l -> name = l
+                    |_->  occurs name l)
+  |_-> failwith " verifica/occurs ";;
 
- 
+(*Seconda fase del progetto unisci i vincoli creati da tconst.
+Si da una lista di vincoli
+ Il risultato, di tipo (etype * etype) list.*)
 let rec unify  l = match l with
-  [] -> []
-  |(TInt,TInt)::tl -> unify tl
-  |(Tchar,Tchar)::tl -> unify tl
-  |(TInt, TList a)::tl -> unify tl                   
-  |(TBool,TBool)::tl -> unify tl
-  |(TBool, TList a)::tl -> unify tl                   
-  |(Tchar, TList a)::tl -> unify tl                   
-  |(TVar x, t)::tl ->
-    if occurs x t then failwith "Controllo verifica"
-    else (TVar x,t)::(unify (subst tl x t))
-  |(t, TVar x)::tl ->
-    if occurs x t then failwith "Controllo verifica"
-    else (TVar x,t)::(unify (subst tl x t))
-  |(TFun(t1,t2),TFun(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
-  |(TPair(t1,t2),TPair(t11,t22))::tl -> unify ((t1,t11) :: (t2,t22) :: tl)
-  |(t1,TPair(t11,t22))::tl -> if t1 = t11 then unify ((t1,t11) :: tl) 
-    else unify ((t1,t22) :: tl)
-  | (TList a, TList b)::tl -> unify tl
-  | _ -> failwith "Non esiste il vincolo";; 
+    [] -> []
+  |hd::tl  ->( match hd with
+                   t1,t2 -> (match t1,t2 with
+                                 (TInt,TInt) -> unify tl
+                               |(TChar,TChar) -> unify tl               
+                               |(TBool,TBool) -> unify tl
+                               | (TVar n1, TVar n2) -> if n1 = n2 then unify tl else unify tl@[hd]
+                               | (TVar id, _) -> if not (occurs id t2) 
+                                 then (t1, t2)::(unify (subst tl t2 id ))
+                                 else failwith "unify tvar 1"
+                               | (_, TVar id) -> if not (occurs id t1) 
+                                 then (t1, t2)::(unify (subst tl t1 id))
+                                 else failwith "unify tvar 2"
+                               |(TFun(t3,t4),TFun(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
+                               |(TPair(t3,t4),TPair(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
+                               | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
+                               | _ ->  hd::tl));; 
+
+(* funzione richiesta dal professore, non smontare per nessun motivo (forse sì... vediamo) *)
+
+let rec typeinf e = 
+let (e1,e2) = tconst e newtypenv in
+let u =  unify e2 in 
+if u = [] then e1 else resolve e1 u 
+and
+ resolve e u = match u with
+    [] -> e
+   |(TVar x, t1)::s1  | (t1, TVar x )::s1 -> resolve (typeCheck e x t1) s1        
+   |_-> failwith "non riesco a inferire"
+and 
+typeCheck e t1 t2 = match e with
+    TInt -> TInt
+  | TBool -> TBool
+  | TChar -> TChar
+  | TVar n -> if n = t1 then t2 else TVar n
+  | TFun (t3,t4) -> TFun (typeCheck t3 t1 t2 , typeCheck t4 t1 t2)
+  | TPair(t3,t4) -> TPair (typeCheck t3 t1 t2, typeCheck t4 t1 t2)
+  | TList [l] -> TList [typeCheck l t1 t2]
+  | _ -> failwith "Errore type check";;
 
 
 
-let rec typeinf e =
-  let rec resolve t s = (match s with
-    [] -> t
-  | (TVar x, t1)::s1 -> resolve (subst_app t x t1) s1
-  | _ -> failwith ("non riesco a fare infeerenza")) in
-  let (t,c) = tconst e newtypenv in
-  resolve t (unify c)
-;;
-
-let s = Let(Ide "prova",
-	     Fun(Ide "x", Sum(Val(Ide "x"), Fst (Epair (Eint 8, Eint 5)))),
-	     Appl(Val(Ide "prova"),Eint 8));;
-
-let (t0, c0) = tconst s newtypenv;;
-unify c0;;
-typeinf s;;
-
-
-tconst (Fst (Epair (Eint 3, Echar 'c'))) newtypenv;;
-tconst (Cons (Echar 'c', Eint 3)) newtypenv;;

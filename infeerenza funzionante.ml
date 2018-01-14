@@ -167,7 +167,7 @@ let (t0,c0) = tconstraints e0 emptyenv;;
 unify c0;;
 
 type_inference e0;;
-
+tconstraints(Add (N 2, N 3)) emptyenv;;
 
 
 
@@ -207,3 +207,4 @@ let doubleboolnat =
 ;;
  
 type_inference doubleboolnat;;
+
