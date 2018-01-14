@@ -216,23 +216,17 @@ and semtry e r =let rec sem e r pila =  match e with
   | Appl (e1,e2) -> (match sem e1 r pila with
                 Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(semtry e2 r))) pila)
                | _ -> failwith "coddati")  
-
-  | Try (e1,i,e2) -> sem e1 r ((i,e2)::pila)
-  
+  | Try (e1,i,e2) -> sem e1 r ((i,e2)::pila)  
   | Raise id -> let (n, s) = controllerTry id pila in sem n r s
+                                                        
   |_-> failwith "problema guard per via del rec in sem"     
 
 in sem e r ([]:(ide*exp)list)
-
-
-and 
+and
 (*Contolla la lista delle eccezioni, non toccare è fragile !!!!! *)
 controllerTry n s = match s with
     [] -> failwith "Eccezione non presente nello stack"
   | (a,b)::tl -> if a = n then (b,tl) else controllerTry n tl;;
-
-
-
 
 semtry(
   Try(    
