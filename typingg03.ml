@@ -51,18 +51,13 @@ let newvar = fun () -> nextsym := !nextsym + 1 ;
 (*crea l'ambiente dei tipi vuoto*)
 let newtypenv = ([]:(ide*etype)list);;
 
-(*applica il tipo all'ambiente, restituendo un tipo...*)
-(*assolutamente da rivedere*)
 
 (*applica il tipo all'ambiente, restituendo un tipo...*)
-(*assolutamente da rivedere*)
 let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e with
     [] -> failwith "ambiente vuoto"
  |  ((Ide a),(b:etype))::tl -> if a = i then b else applytypenv tl (Ide i);;
   
-
 (*associa un tipo e un identificatore all'ambiente dei tipi*)
-
 let rec bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =match e with
     []-> (i,t)::[]
   |(i1,t1)::tl -> if i=i1 then (i1,t)::tl else (i1,t1)::(bindtyp tl i t) ;; 
@@ -75,86 +70,84 @@ let rec bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =match e with
 let rec  tconst e tr = match e with
     Eint n ->(TInt,[])
   | Val x -> (applytypenv tr x, [])
-  | Sum   (e1,e2)| Diff  (e1,e2) | Times (e1,e2) ->
-    let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 tr in
-    let c = [(t1,TInt); (t2,TInt)] in
-    (TInt, c @ c1 @ c2)
   |Echar c -> (TChar,[])
   |True | False -> (TBool, [])
   |Empty -> (TList [newvar()] ,[])
-  |And (e1,e2)|Or (e1,e2) -> 
-    let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 tr in
-    let c = [(t1,TBool);(t2,TBool)] in
-    (TBool, c @ c1 @ c2)
-  |Not e1 ->
-    let (t1,c1) = tconst e1 tr in
-    (TBool, [(t1,TBool)]@c1)
-  | Eq (e1,e2)->      
-    let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 tr in
-    let c = [(t1,t2);(t1,t1);(t2,t2)]  in
-    (TBool, c @ c1 @ c2)
-  |Less (e1,e2) ->
-    let (t1,c1) = tconst e1 tr in
+  | Sum   (e1,e2)| Diff  (e1,e2) | Times (e1,e2) ->
+      let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TInt); (t2,TInt)] in
-    (TBool, c @ c1 @ c2)
+      (TInt, c @ c1 @ c2)
+  |And (e1,e2)|Or (e1,e2) -> 
+      let (t1,c1) = tconst e1 tr in
+    let (t2,c2) = tconst e2 tr in
+    let c = [(t1,TBool);(t2,TBool)] in
+      (TBool, c @ c1 @ c2)
+  |Not e1 ->
+     let (t1,c1) = tconst e1 tr in
+      (TBool, [(t1,TBool)]@c1)
+  | Eq (e1,e2)->      
+      let (t1,c1) = tconst e1 tr in
+    let (t2,c2) = tconst e2 tr in
+    let c = [(t1,t2);(t1,t1);(t2,t2)]  in
+      (TBool, c @ c1 @ c2)
+  |Less (e1,e2) ->
+     let (t1,c1) = tconst e1 tr in
+    let (t2,c2) = tconst e2 tr in
+    let c = [(t1,TInt); (t2,TInt)] in
+      (TBool, c @ c1 @ c2)
   |Cons (e1,e2) ->
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c =  [ (t1,t1) ; (t2, TList [t1]) ] in
        (TList [t1],c@c1@c2)  
- | Head l -> 
+  | Head l -> 
       let (TList [t1], c1) =  tconst l  tr
-        in (t1, ([(TList [t1], TList [t1])]@c1)) 
+      in (t1, ([(TList [t1], TList [t1])]@c1)) 
   | Tail l ->
       let (t1,c1) =  tconst l tr
-        in (t1, c1)
+      in (t1, c1)
   |Epair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
-   (TPair(t1,t2), c@c1@c2)
+       (TPair(t1,t2), c@c1@c2)
   |Fst(Epair(e1,e2)) ->
-      let c = (Epair(e1,e2)) in 
-      let (t1,c1) = tconst c tr
-        in (match t1 with
-            (TPair(a,b)) -> (a, ([(TPair(a,b), TPair(a,b))]@
-                     (c1)))
-          | _ -> failwith " errore sulla coppia")
+     let c = (Epair(e1,e2)) in 
+     let (t1,c1) = tconst c tr
+      in (match t1 with
+                (TPair(a,b)) -> (a, ([(TPair(a,b), TPair(a,b))]@(c1)))
+              | _ -> failwith " errore sulla coppia")
   |Snd (Epair (e1,e2)) ->
-      let c = (Epair(e1,e2)) in 
+     let c = (Epair(e1,e2)) in 
       let (t1,c1) = tconst c tr
-        in (match t1 with
-            (TPair(a,b)) -> (b, ([(TPair(a,b), TPair(a,b))]@
-                     (c1)))
-          | _ -> failwith " errore sulla coppia")
+      in (match t1 with
+                (TPair(a,b)) -> (b, ([(TPair(a,b), TPair(a,b))]@(c1)))
+              | _ -> failwith " errore sulla coppia")
   |Ifthenelse (e0,e1,e2) ->
-    let (t0,c0) = tconst e0 tr in
+     let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
     let c = [(t0,TBool); (t1,t2)] in
-    (t1, c @ c0 @ c1 @ c2)
- | Let (x,e1,e2) ->
-    let tx =newvar () in 
+      (t1, c @ c0 @ c1 @ c2)
+  | Let (x,e1,e2) ->
+     let tx =newvar () in 
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 (bindtyp tr x tx) in
     let c = [(t1,tx)] in   
-    (t2, c @ c1 @ c2)
+      (t2, c @ c1 @ c2)
  | Fun (x,e1) ->
-    let tx = newvar() in
+     let tx = newvar() in
     let (t1,c1) = tconst e1 (bindtyp tr x tx) in
-    (TFun (tx,t1), c1)
+      (TFun (tx,t1), c1)
  | Appl (e1,e2) ->
-    let tx = newvar() in
+     let tx = newvar() in
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 tr in
     let c = [(t1,TFun(t2,tx))] in
-    (tx, c @ c1 @ c2)    
+      (tx, c @ c1 @ c2)    
  | Rec (x, Fun(i,e)) ->
-    let tx = newvar() in
+     let tx = newvar() in
     let (t1,c1) = tconst (Fun(i,e)) (bindtyp tr x tx) in
    (match t1 with
         TFun (a,b) -> (TFun(a,b), ([(TFun(a,b),tx)]@c1))
@@ -163,7 +156,7 @@ let rec  tconst e tr = match e with
  |_-> failwith "errore";;
 
 
-let rec subst n o l= let rec subst_app n o e = match e with
+let rec subst_app n o e = match e with
     TInt -> e
   | TChar -> e
   | TBool -> e
@@ -171,39 +164,45 @@ let rec subst n o l= let rec subst_app n o e = match e with
   | TFun (t1,t2) -> TFun (subst_app n o t1 , subst_app n o t2)
   | TPair (t1,t2) ->TPair  (subst_app n o t1 , subst_app n o t2)
   | TList [l] -> TList [subst_app n o l]
-  |_-> failwith "errore sostituzione" in  List.fold_right (fun (a,b) c -> (subst_app n o a, subst_app n o b)::c) l [];;
+  |_-> failwith "errore sostituzione";;
   
 
+let rec subst n o l = List.fold_right (fun (a,b) c -> (subst_app n o a, subst_app n o b)::c) l [];;
+  
 
 let rec occurs name typ = match typ with
-  TInt | TBool |TChar -> false
-| TVar n1 -> n1=name
-| TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
-| TFun (t1,t2) -> (occurs name t1) || (occurs name t2)
-| TList [l] -> (match l with
-      TVar l -> name = l
-    |_->  occurs name l)
-|_-> failwith " verifica/occurs ";;
+    TInt | TBool |TChar -> false
+  | TVar n1 -> n1=name
+  | TPair (t1,t2) -> (occurs name t1) || (occurs name t2)
+  | TFun (t1,t2) -> (occurs name t1) || (occurs name t2)
+  | TList [l] -> (match l with
+                      TVar l -> name = l
+                    |_->  occurs name l)
+  |_-> failwith " verifica/occurs ";;
 
  
 let rec unify  l = match l with
-  [] -> []
+    [] -> []
   |hd::tl  ->( match hd with
-                  t1,t2 -> (match t1,t2 with
-                    (TInt,TInt) -> unify tl
-                  |(TChar,TChar) -> unify tl               
-                  |(TBool,TBool) -> unify tl
-                  | (TVar n1, TVar n2) -> if n1 = n2 then unify tl else unify tl@[hd]
-                  | (TVar n, _) -> if not (occurs n t2) 
-                          then (t1, t2)::(unify (subst t2 n tl))
-                          else failwith "unify tvar 1"
-                  | (_, TVar n) -> if not (occurs n t1) 
-                          then (t1, t2)::(unify (subst t1 n tl))
-                          else failwith "unify tvar 2"
-                  |(TFun(t3,t4),TFun(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
-                  |(TPair(t3,t4),TPair(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
-                  | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
-                  | _ ->  hd::tl));; 
+                   t1,t2 -> (match t1,t2 with
+                                 (TInt,TInt) -> unify tl
+                               |(TChar,TChar) -> unify tl               
+                               |(TBool,TBool) -> unify tl
+                               | (TVar n1, TVar n2) -> if n1 = n2 then unify tl else unify tl@[hd]
+                               | (TVar n, _) -> if not (occurs n t2) 
+                                 then (t1, t2)::(unify (subst t2 n tl))
+                                 else failwith "unify tvar 1"
+                               | (_, TVar n) -> if not (occurs n t1) 
+                                 then (t1, t2)::(unify (subst t1 n tl))
+                                 else failwith "unify tvar 2"
+                               |(TFun(t3,t4),TFun(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
+                               |(TPair(t3,t4),TPair(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
+                               | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
+                               | _ ->  hd::tl));; 
+
+
+
+
 
 let rec typeCheck e t1 t2 = match e with
     TInt -> TInt
@@ -215,10 +214,6 @@ let rec typeCheck e t1 t2 = match e with
   | TList [l] -> TList [typeCheck l t1 t2]
   | _ -> failwith "Errore type check";;
 
-
-
-
-
 let rec typeinf e = 
 let (e1,e2) = tconst e newtypenv in
 let u =  unify e2 in 
@@ -229,3 +224,4 @@ and resolve e u = match u with
    |_-> failwith "non riesco a inferire";;
 
 
+typeinf (Cons(Eint 2, Empty)) ;;
