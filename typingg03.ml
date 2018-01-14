@@ -43,9 +43,10 @@ type etype =
 (* USARE I PUNTATORI IN OCAML*)
 (* puntatore per nuova variabile con reference?*)
 
-(* queste 2 funzioni creano ununa nuova variabile, secondo specifiche di progetto*)
+(* queste 2 funzioni creano una nuova variabile, secondo specifiche di progetto*)
 
 let nextsym = ref (-1);;
+
 let newvar = fun () -> nextsym := !nextsym + 1 ;
   TVar ("?T" ^ string_of_int (!nextsym));;
 
@@ -56,10 +57,10 @@ let newtypenv = ([]:(ide*etype)list);;
 
 (*applica il tipo all'ambiente, restituendo un tipo, vedere specifiche di progetto*)
 let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e with
-    [] -> failwith "ambiente vuoto"
+    [] -> failwith "empty environment"
  |  ((Ide a),(b:etype))::tl -> if a = i then b else applytypenv tl (Ide i);;
   
-(*associa un tipo e un identificatore all'ambiente dei tipi, vedere specifiche di progeto*)
+(*associa un tipo e un identificatore all'ambiente dei tipi, vedere specifiche di progetto*)
 let rec bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =match e with
     []-> (i,t)::[]
   |(i1,t1)::tl -> if i=i1 then (i1,t)::tl else (i1,t1)::(bindtyp tl i t) ;; 
@@ -130,7 +131,7 @@ let rec  tconst e tr = match e with
       let (t1,c1) = tconst c tr
       in (match t1 with
                 (TPair(a,b)) -> (b, ([(TPair(a,b), TPair(a,b))]@(c1)))
-              | _ -> failwith " errore sulla coppia")
+              | _ -> failwith "error in the couple")
   |Ifthenelse (e0,e1,e2) ->
      let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
@@ -158,9 +159,9 @@ let rec  tconst e tr = match e with
     let (t1,c1) = tconst (Fun(i,e)) (bindtyp tr x tx) in
    (match t1 with
         TFun (a,b) -> (TFun(a,b), ([(TFun(a,b),tx)]@c1))
-      |_->failwith "varie bestemmie quando non funziona")      
+      |_->failwith "not working")      
 
- |_-> failwith "errore";;
+ |_-> failwith "error";;
 
 
 
@@ -180,7 +181,7 @@ let rec subst_app n o e = match e with
   | TFun (t1,t2) -> TFun (subst_app n o t1 , subst_app n o t2)
   | TPair (t1,t2) ->TPair  (subst_app n o t1 , subst_app n o t2)
   | TList [l] -> TList [subst_app n o l]
-  |_-> failwith "errore sostituzione";;
+  |_-> failwith "replacement error";;
   
   
 (*sostituisce un tipo per un identificatore di tipo in una lista di vincoli*)
@@ -205,35 +206,41 @@ Si da una lista di vincoli
  Il risultato, di tipo (etype * etype) list.*)
 let rec unify  l = match l with
     [] -> []
-  |hd::tl  ->( match hd with
-                   t1,t2 -> (match t1,t2 with
-                                 (TInt,TInt) -> unify tl
-                               |(TChar,TChar) -> unify tl               
-                               |(TBool,TBool) -> unify tl
-                               | (TVar n1, TVar n2) -> if n1 = n2 then unify tl else unify tl@[hd]
-                               | (TVar id, _) -> if not (occurs id t2) 
-                                 then (t1, t2)::(unify (subst tl t2 id ))
-                                 else failwith "unify tvar 1"
-                               | (_, TVar id) -> if not (occurs id t1) 
-                                 then (t1, t2)::(unify (subst tl t1 id))
-                                 else failwith "unify tvar 2"
-                               |(TFun(t3,t4),TFun(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
-                               |(TPair(t3,t4),TPair(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
-                               | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
-                               | _ ->  hd::tl));; 
+  |(t1,t2)::tl  -> (
+             match t1,t2 with
+                     (TInt,TInt) -> unify tl
+                     |(TChar,TChar) -> unify tl               
+                     |(TBool,TBool) -> unify tl
+                     | (TVar n1, TVar n2) -> if n1 = n2 then unify tl else unify tl@[(t1,t2)]
+                     | (TVar id, _) -> if not (occurs id t2) 
+                                          then (t1, t2)::(unify (subst tl t2 id ))
+                                       else failwith "unify tvar 1"
+                     | (_, TVar id) -> if not (occurs id t1) 
+                                           then (t1, t2)::(unify (subst tl t1 id))
+                                       else failwith "unify tvar 2"
+                     |(TFun(t3,t4),TFun(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
+                     |(TPair(t3,t4),TPair(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
+                     | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
+                     | _ ->  (t1,t2)::tl
+)
+;; 
 
 (* funzione richiesta dal professore, non smontare per nessun motivo (forse sì... vediamo) *)
 
 let rec typeinf e = 
-let (e1,e2) = tconst e newtypenv in
-let u =  unify e2 in 
-if u = [] then e1 else resolve e1 u 
+  let (e1,e2) = tconst e newtypenv in
+  let u =  unify e2 in 
+    if u = [] then e1 else resolve e1 u 
+
 and
+
  resolve e u = match u with
     [] -> e
    |(TVar x, t1)::s1  | (t1, TVar x )::s1 -> resolve (typeCheck e x t1) s1        
-   |_-> failwith "non riesco a inferire"
+   |_-> failwith "I can not infer"
+
 and 
+
 typeCheck e t1 t2 = match e with
     TInt -> TInt
   | TBool -> TBool
@@ -242,7 +249,7 @@ typeCheck e t1 t2 = match e with
   | TFun (t3,t4) -> TFun (typeCheck t3 t1 t2 , typeCheck t4 t1 t2)
   | TPair(t3,t4) -> TPair (typeCheck t3 t1 t2, typeCheck t4 t1 t2)
   | TList [l] -> TList [typeCheck l t1 t2]
-  | _ -> failwith "Errore type check";;
+  | _ -> failwith "Error type check";;
 
 
 
