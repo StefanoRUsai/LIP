@@ -57,7 +57,7 @@ type eval =
 | Pair of eval * eval
 | Closure of exp * env
 and
- env = Env of (ide -> eval);;
+env = ide -> eval;;
 
 
  
@@ -320,11 +320,9 @@ exception TypeMismatch ;;
 
       
 (* funzioni di ambiente per l'interprete*)
-let rec emptyenv =  Env(fun x -> Undefined)
-and bind (r, x, d) = Env (fun y -> if y=x then d else applyenv (r,y))
-and applyenv ((Env r),x) = r x ;;
-
-
+let rec emptyenv =  (fun (x:ide) -> Undefined)
+and applyenv ((r:env),(x:ide)) = r x
+and bind (r, x, d) =  (fun y -> if y=x then d else applyenv (r,y));;
 
 (* serve per controllare il tipo delle coppie 
 nell'eq dell'interprete, da rivedere e controllare !!!!!!!!!!*)

@@ -47,6 +47,7 @@ type etype =
 
 
 
+
 type eval =
   Undefined
 | Int of int
@@ -56,7 +57,7 @@ type eval =
 | Pair of eval * eval
 | Closure of exp * env
 and
- env = Env of (ide -> eval);;
+env = ide -> eval;;
 
 
  

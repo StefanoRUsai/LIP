@@ -315,11 +315,10 @@ typeCheck e t1 t2 = match e with
 exception UndefinedIde of ide;;
 exception TypeMismatch ;;
 
-      
 (* funzioni di ambiente per l'interprete*)
-let rec emptyenv =  Env(fun x -> Undefined)
-and bind (r, x, d) = Env (fun y -> if y=x then d else applyenv (r,y))
-and applyenv ((Env r),x) = r x ;;
+let rec emptyenv =  (fun (x:ide) -> Undefined)
+and applyenv ((r:env),(x:ide)) = r x
+and bind (r, x, d) =  (fun y -> if y=x then d else applyenv (r,y));;
 
 
 
@@ -490,3 +489,6 @@ controllerTry n s = match s with
 
 
 let rec semtry e r= sem e r newtypenv newstack;;
+
+
+
