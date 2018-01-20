@@ -92,14 +92,13 @@ let rec bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =match e with
 
 
 (*vincoli di tipaggio, ci si prova*)
-(*Questa è la  costruzione di un insieme di vincoli per i tipi.
-Il primo argomento è l'espressione da analizzare,  secondo argomento è un ambiente di tipi,
-con tipo (ide * etype) list. Il risultato è un valore di tipo etype * (etype * etype) list,
-in cui il primo elemento è il tipo di espressione e il secondo elemento è l'elenco di vincoli.
+(*Questa è la  costruzione di un insieme di vincoli per i tipi.
+Il primo argomento è l'espressione da analizzare,  secondo argomento è un ambiente di tipi,
+con tipo (ide * etype) list. Il risultato è un valore di tipo etype * (etype * etype) list,
+in cui il primo elemento è il tipo di espressione e il secondo elemento è l'elenco di vincoli.
 Secondo le specifiche di progetto si interpretano le regole sull'inferenza di tipo*)
 
 (*INFERENZA DI TIPO*)
-
 let rec  tconst e tr = match e with
     Eint n ->(TInt,[])
   | Val x -> (applytypenv tr x, [])
@@ -137,16 +136,14 @@ let rec  tconst e tr = match e with
   | Head l -> 
       let (l1, c1) =  tconst l  tr in
       let t1 = (match l1 with
-                    TList [t2]-> (t2, ([(TList [t2], TList [t2])]@c1)) 
-                  | TVar n -> let a = newvar() in (a, ([(TList [a], l1)]@c1))  
+          TList [t1]-> t1
                   |_-> failwith "errore head in inferenza")
       in 
-        t1 
+      (t1, ([(TList [t1], TList [t1])]@c1)) 
   | Tail l ->
       let (l1,c1) =  tconst l tr in
       let  t1 = (match l1 with                        
                    TList _->  (l1, c1)
-                   | TVar n -> let a = newvar() in (TList [a], ([TList[a], l1]))
                    |_->failwith "errore tail in inferenza") in
         t1
   |Epair (e1,e2) -> 
@@ -154,20 +151,20 @@ let rec  tconst e tr = match e with
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
        (TPair(t1,t2), c@c1@c2)
-  | Fst e1 ->(
+| Fst e1 ->(
       let (t1,c1) = tconst e1 tr
         in (match t1 with
             (TPair(first,second)) -> 
               (first, ([(TPair(first,second), TPair(first,second))]@ c1))
               | TVar n ->(let a = newvar()  in (a, [TPair(a,newvar()), t1]@c1))
-          | _ -> failwith "non è una coppia"))
+          | _ -> failwith "non è una coppia"))
   | Snd e1 ->(
       let (t1,c1) = tconst e1 tr
         in (match t1 with
             (TPair(first,second)) -> 
               (second, ([(TPair(first,second), TPair(first,second))]@ c1))
               | TVar n ->(let a = newvar()  in (a, [TPair(a,newvar()),t1]@c1))
-          | _ -> failwith "non è una coppia"))   
+          | _ -> failwith "non è una coppia"))     
   |Ifthenelse (e0,e1,e2) ->
      let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
@@ -177,7 +174,7 @@ let rec  tconst e tr = match e with
   | Let (x,e1,e2) ->
      let tx =newvar () in 
     let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 (bindtyp tr x tx) in
+    let (t2,c2) = tconst e2 (bindtyp tr x t1) in
     let c = [(t1,tx)] in   
       (t2, c @ c1 @ c2)
  | Fun (x,e1) ->
@@ -227,7 +224,7 @@ let rec subst_app n o e = match e with
 let rec subst l n o = List.fold_right (fun (a,b) c -> (subst_app n o a, subst_app n o b)::c) l [];;  
 
 
-(*   dice se il nome di un tipo è verificato *)
+(*   dice se il nome di un tipo è verificato *)
 
 let rec occurs name typ = match typ with
     TInt | TBool |TChar -> false
@@ -260,7 +257,7 @@ let rec unify  l = match l with
                                | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
                                | _ ->  (t1,t2)::tl);; 
 
-(* funzione richiesta dal professore, non smontare per nessun motivo (forse sì... vediamo) *)
+(* funzione richiesta dal professore, non smontare per nessun motivo (forse sì... vediamo) *)
 
 let rec typeinf e = 
 let (e1,e2) = tconst e newtypenv in 
@@ -274,7 +271,7 @@ and
    |_-> failwith "non riesco a inferire"
 and 
 (*typecheck per la risoluzione dei vincoli, diversa dalla funzione per
- le sostituzioni non modificare assolutamente. Più simile a quello nella pagina del prof
+ le sostituzioni non modificare assolutamente. Più simile a quello nella pagina del prof
 *)
 typeCheck e t1 t2 = match e with
     TInt -> TInt
@@ -285,5 +282,3 @@ typeCheck e t1 t2 = match e with
   | TPair(t3,t4) -> TPair (typeCheck t3 t1 t2, typeCheck t4 t1 t2)
   | TList [l] -> TList [typeCheck l t1 t2]
   | _ -> failwith "Errore type check";;
-
-

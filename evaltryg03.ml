@@ -102,8 +102,6 @@ in cui il primo elemento è il tipo di espressione e il secondo elemento è l'elen
 Secondo le specifiche di progetto si interpretano le regole sull'inferenza di tipo*)
 
 (*INFERENZA DI TIPO*)
-
-
 let rec  tconst e tr = match e with
     Eint n ->(TInt,[])
   | Val x -> (applytypenv tr x, [])
@@ -141,16 +139,14 @@ let rec  tconst e tr = match e with
   | Head l -> 
       let (l1, c1) =  tconst l  tr in
       let t1 = (match l1 with
-                    TList [t2]-> (t2, ([(TList [t2], TList [t2])]@c1)) 
-                  | TVar n -> let a = newvar() in (a, ([(TList [a], l1)]@c1))  
+          TList [t1]-> t1
                   |_-> failwith "errore head in inferenza")
       in 
-        t1 
+      (t1, ([(TList [t1], TList [t1])]@c1)) 
   | Tail l ->
       let (l1,c1) =  tconst l tr in
       let  t1 = (match l1 with                        
                    TList _->  (l1, c1)
-                   | TVar n -> let a = newvar() in (TList [a], ([TList[a], l1]))
                    |_->failwith "errore tail in inferenza") in
         t1
   |Epair (e1,e2) -> 
@@ -158,7 +154,7 @@ let rec  tconst e tr = match e with
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
        (TPair(t1,t2), c@c1@c2)
-  | Fst e1 ->(
+| Fst e1 ->(
       let (t1,c1) = tconst e1 tr
         in (match t1 with
             (TPair(first,second)) -> 
@@ -171,7 +167,7 @@ let rec  tconst e tr = match e with
             (TPair(first,second)) -> 
               (second, ([(TPair(first,second), TPair(first,second))]@ c1))
               | TVar n ->(let a = newvar()  in (a, [TPair(a,newvar()),t1]@c1))
-          | _ -> failwith "non è una coppia"))   
+          | _ -> failwith "non è una coppia"))     
   |Ifthenelse (e0,e1,e2) ->
      let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
@@ -181,7 +177,7 @@ let rec  tconst e tr = match e with
   | Let (x,e1,e2) ->
      let tx =newvar () in 
     let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 (bindtyp tr x tx) in
+    let (t2,c2) = tconst e2 (bindtyp tr x t1) in
     let c = [(t1,tx)] in   
       (t2, c @ c1 @ c2)
  | Fun (x,e1) ->
@@ -202,7 +198,6 @@ let rec  tconst e tr = match e with
       |_->failwith "varie bestemmie quando non funziona")      
 
  |_-> failwith "errore";;
-
 
 
 (* Funzioni di appoggio per unificare i tipi
