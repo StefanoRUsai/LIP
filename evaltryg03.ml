@@ -154,7 +154,7 @@ let rec  tconst e tr = match e with
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
        (TPair(t1,t2), c@c1@c2)
-| Fst e1 ->(
+  | Fst e1 ->(
       let (t1,c1) = tconst e1 tr
         in (match t1 with
             (TPair(first,second)) -> 
