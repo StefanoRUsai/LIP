@@ -137,14 +137,16 @@ let rec  tconst e tr = match e with
   | Head l -> 
       let (l1, c1) =  tconst l  tr in
       let t1 = (match l1 with
-          TList [t1]-> t1
+                    TList [t2]-> (t2, ([(TList [t2], TList [t2])]@c1)) 
+                  | TVar n -> let a = newvar() in (a, ([(TList [a], l1)]@c1))  
                   |_-> failwith "errore head in inferenza")
       in 
-      (t1, ([(TList [t1], TList [t1])]@c1)) 
+        t1 
   | Tail l ->
       let (l1,c1) =  tconst l tr in
       let  t1 = (match l1 with                        
                    TList _->  (l1, c1)
+                   | TVar n -> let a = newvar() in (TList [a], ([TList[a], l1]))
                    |_->failwith "errore tail in inferenza") in
         t1
   |Epair (e1,e2) -> 
@@ -157,12 +159,14 @@ let rec  tconst e tr = match e with
         in (match t1 with
             (TPair(first,second)) -> 
               (first, ([(TPair(first,second), TPair(first,second))]@ c1))
+              | TVar n ->(let a = newvar()  in (a, [TPair(a,newvar()), t1]@c1))
           | _ -> failwith "non è una coppia"))
   | Snd e1 ->(
       let (t1,c1) = tconst e1 tr
         in (match t1 with
             (TPair(first,second)) -> 
               (second, ([(TPair(first,second), TPair(first,second))]@ c1))
+              | TVar n ->(let a = newvar()  in (a, [TPair(a,newvar()),t1]@c1))
           | _ -> failwith "non è una coppia"))   
   |Ifthenelse (e0,e1,e2) ->
      let (t0,c0) = tconst e0 tr in
@@ -173,7 +177,7 @@ let rec  tconst e tr = match e with
   | Let (x,e1,e2) ->
      let tx =newvar () in 
     let (t1,c1) = tconst e1 tr in
-    let (t2,c2) = tconst e2 (bindtyp tr x t1) in
+    let (t2,c2) = tconst e2 (bindtyp tr x tx) in
     let c = [(t1,tx)] in   
       (t2, c @ c1 @ c2)
  | Fun (x,e1) ->
@@ -281,4 +285,5 @@ typeCheck e t1 t2 = match e with
   | TPair(t3,t4) -> TPair (typeCheck t3 t1 t2, typeCheck t4 t1 t2)
   | TList [l] -> TList [typeCheck l t1 t2]
   | _ -> failwith "Errore type check";;
+
 

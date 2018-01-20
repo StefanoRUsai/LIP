@@ -1,4 +1,6 @@
-#use "ev.ml";;
+
+#use "evalg03.ml";;
+
 (* Vari tests *)
 let giuste = 
   [Eint 2, Int 2; 
@@ -66,7 +68,7 @@ let giuste =
    Let(Ide "x", True, And(Val(Ide "x"), False)), Bool false;
    Let(Ide "x", Echar 'c', Ifthenelse(Eq(Val(Ide "x"), Echar 'c'), Echar 'd', Echar 'f')), Char 'd';
    Let(Ide "x", Fun(Ide "y", Sum(Val(Ide "y"), Eint 3)), Appl(Val (Ide "x"), Eint 2)), Int 5;
-(*   Fun(Ide "x", Val (Ide "x")), TFun(TVar "_", TVar "_");
+(* Fun(Ide "x", Val (Ide "x")), TFun(TVar "_", TVar "_");
    Fun(Ide "x", Sum(Val(Ide "x"), Eint 2)), TFun(TInt,TInt);
    Fun(Ide "x", And(Val(Ide "x"), True)), TFun(TBool,TBool);
    Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"), Echar 'c'), Echar 'd', Echar 'f')), TFun(TChar,TChar);
@@ -81,6 +83,8 @@ let giuste =
 *)
 ];;
 	
+
+
 let sbagliate = [
   Eq(Epair(Eint 2, Echar 'c'),Epair(Echar 'd', Eint 3));
   Eq(Cons(Eint 2, Empty), Cons(Echar 'c', Empty));
@@ -153,6 +157,7 @@ in if not (snd result) then "Tutto OK" else "La "^string_of_int (fst result)^" n
 testGiusteScoppio giuste;; (* se va tutto bene, le espressioni "giuste" sono tutte inferibili *)
 
 (* NON USARE se non si passa il test anti-scoppio *)
-testGiuste giuste;;  (* verifica se il risultato di typeinf � quello atteso *)
+testGiuste giuste;;  (* verifica se il risultato di typeinf и quello atteso *)
 
 testSbagliate sbagliate;; (* verifica che nessuna espressione "sbagliata" venga inferita come giusta *)
+
