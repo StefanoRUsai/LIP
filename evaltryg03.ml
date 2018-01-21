@@ -437,7 +437,7 @@ and  sem e r envType pila = match e with
                      | Char a, Char b -> Bool (a=b) 
                      | List [a], List [] -> Bool false
                      | List [], List [b] -> Bool false
-                     | List a, List b -> if ((typeinf_App e1 envType)=(typeinf_App e2 envType)) then Bool (a=b)
+                     | List a, List b -> if ((typeinf_App (expr (sem e1 r envType pila) r) envType)=(typeinf_App (expr (sem e2 r envType pila) r) envType)) then Bool (a=b)
                        else failwith "le liste non sono dello stesso tipo"                     
                      | Pair(a,b), Pair (c,d) -> if  (typeCheckEq (a,c) &&  typeCheckEq (b,d))
                        then  Bool (a=c&&b=d) else failwith "le coppie non sono dello stesso tipo"
@@ -461,7 +461,7 @@ and  sem e r envType pila = match e with
                      | List (hd::tl) -> tl  
                      | _ -> raise TypeMismatch)         
               in List b 
-    | Cons (e1, e2) -> (if (not (typeinf_App (Cons (e1, e2)) envType = TInt)) then
+    | Cons (e1, e2) -> (if (not (typeinf_App (Cons ((expr (sem e1 r envType pila) r), (expr (sem e2 r envType pila) r)))  envType = TInt)) then
         (let a = sem e2 r envType pila in 
                                 let b = (match a with                     
                                            |(List l) ->(match l with
@@ -484,20 +484,18 @@ and  sem e r envType pila = match e with
           let newValue = (sub (e1,y,(Rec(y,Fun(x,e1))))) in
             Closure(Fun(x,newValue), controllerFV (newValue,r,emptyenv)) 
   | Fun (x,e1) -> Closure ((Fun(x,e1)), controllerFV (e1,r,emptyenv)) 
-   | Appl (e1,e2) -> (match sem_App e1 r envType  with
-                Closure ((Fun(x,f)),d) -> (sem_App f (bind (d,x,(sem_App e2 r envType ))) 
-                                             (bindtyp envType x (typeinf_App (expr (sem_App e2 r envType) r) envType) ) )
- | Try (e1,i,e2) -> sem e1 r envType ((i,e2)::pila)  
+   | Appl (e1,e2) -> (match sem e1 r envType pila with
+                Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(sem e2 r envType pila)))  
+                                             (bindtyp envType x (typeinf_App (expr (sem e2 r envType pila) r) envType) ) pila))
+  | Try (e1,i,e2) -> sem e1 r envType ((i,e2)::pila)  
   | Raise id -> let (n, s) = controllerTry id pila in sem n r envType s
-  |_-> failwith "problema guard per via del rec in sem"     
-
-    
+  |_-> failwith "problema guard per via del rec in sem"      
 and
 (*Contolla la lista delle eccezioni, se l'eccezione è presente nella lista
 viene gestita e restituisce la seconda espressione che si trova nel Try collegato
  al Raise...  non toccare è fragile !!!!! *)
 
-controllerTry n s = match s with
+ controllerTry n s = match s with
     [] -> failwith "Eccezione non presente nello stack"
   | (a,b)::tl -> if a = n then (b,tl) else controllerTry n tl;;
 

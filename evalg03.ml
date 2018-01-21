@@ -208,9 +208,7 @@ occurs*)
 nella sostituzione dei vincoli. Specialmente nelle liste. Diverso dal typecheck
 usato per il resolve*)
 let rec subst_app n o e = match e with
-    TInt -> e
-  | TChar -> e
-  | TBool -> e
+    TInt | TChar | TBool -> e
   | TVar y -> if y=o then n else TVar y
   | TFun (t1,t2) -> TFun (subst_app n o t1 , subst_app n o t2)
   | TPair (t1,t2) ->TPair  (subst_app n o t1 , subst_app n o t2)
@@ -432,7 +430,8 @@ and  sem_App e r envType = match e with
                      | Char a, Char b -> Bool (a=b) 
                      | List [a], List [] -> Bool false
                      | List [], List [b] -> Bool false
-                     | List a, List b -> if ((typeinf_App e1 envType)=(typeinf_App e2 envType)) then Bool (a=b)
+                     | List a, List b -> if
+                         ((typeinf_App (expr (sem_App e1 r envType) r) envType)=(typeinf_App (expr (sem_App e2 r envType) r) envType)) then Bool (a=b)
                        else failwith "le liste non sono dello stesso tipo"                     
                      | Pair(a,b), Pair (c,d) -> if  (typeCheckEq (a,c) &&  typeCheckEq (b,d))
                        then  Bool (a=c&&b=d) else failwith "le coppie non sono dello stesso tipo"
@@ -456,7 +455,7 @@ and  sem_App e r envType = match e with
                      | List (hd::tl) -> tl  
                      | _ -> raise TypeMismatch)         
               in List b 
-    | Cons (e1, e2) -> (if (not (typeinf_App (Cons (e1, e2)) envType = TInt)) then
+    | Cons (e1, e2) -> (if (not (typeinf_App (Cons ((expr (sem_App e1 r envType) r), (expr (sem_App e2 r envType) r))) envType = TInt)) then
         (let a = sem_App e2 r envType in 
                                 let b = (match a with                     
                                            |(List l) ->(match l with
