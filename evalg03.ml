@@ -173,7 +173,7 @@ let rec  tconst e tr = match e with
     let c = [(t0,TBool); (t1,t2)] in
       (t1, c @ c0 @ c1 @ c2)
   | Let (x,e1,e2) ->
-     let tx =newvar () in 
+    let tx =newvar () in 
     let (t1,c1) = tconst e1 tr in
     let (t2,c2) = tconst e2 (bindtyp tr x t1) in
     let c = [(t1,tx)] in   
@@ -196,6 +196,8 @@ let rec  tconst e tr = match e with
       |_->failwith "varie bestemmie quando non funziona")      
 
  |_-> failwith "errore";;
+
+
 
 
 
@@ -340,6 +342,21 @@ let rec typeCheckEq (a,b) = match a,b with
 
 let newstack = ([]:(ide*exp)list);;
 
+
+
+let rec expr e envE =
+  match e with
+      Undefined -> failwith "l'eval è di tipo undefined"
+    | Int x -> Eint x
+    | Bool b -> if b then True else False
+    | Char c -> Echar c
+    | List [] -> Empty
+    | List (hd::tl) -> Cons(expr hd envE, expr (List tl) envE)
+    | Pair(sx,dx) -> Epair(expr sx envE, expr dx envE)
+    | _ -> failwith "errore nel ritorno dell'espressione"
+;;
+
+
 (* le funzioni che iniziano per eval sono un typecheck 
 per l'interprete, per restituire un 
 dato primivito della macchina ospite*)
@@ -471,10 +488,14 @@ and  sem_App e r envType = match e with
   | Fun (x,e1) -> Closure ((Fun(x,e1)), controllerFV (e1,r,emptyenv)) 
   | Appl (e1,e2) -> (match sem_App e1 r envType  with
                 Closure ((Fun(x,f)),d) -> (sem_App f (bind (d,x,(sem_App e2 r envType ))) 
-                                             (bindtyp envType x (typeinf_App e2 envType) ) )
+                                             (bindtyp envType x (typeinf_App (expr (sem_App e2 r envType) r) envType) ) )
+
                | _ -> failwith "errore closure")  
   |_-> failwith "problema guard per via del rec in sem";;     
 
 (*interprete principale del progetto*)
 let rec sem e r= sem_App e r newtypenv;;
+
+
+
 

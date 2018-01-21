@@ -338,6 +338,21 @@ let rec typeCheckEq (a,b) = match a,b with
 
 let newstack = ([]:(ide*exp)list);;
 
+let rec expr e envE =
+  match e with
+      Undefined -> failwith "l'eval è di tipo undefined"
+    | Int x -> Eint x
+    | Bool b -> if b then True else False
+    | Char c -> Echar c
+    | List [] -> Empty
+    | List (hd::tl) -> Cons(expr hd envE, expr (List tl) envE)
+    | Pair(sx,dx) -> Epair(expr sx envE, expr dx envE)
+    | _ -> failwith "errore nel ritorno dell'espressione";;
+
+
+
+
+
 (* le funzioni che iniziano per eval sono un typecheck 
 per l'interprete, per restituire un 
 dato primivito della macchina ospite*)
@@ -469,11 +484,10 @@ and  sem e r envType pila = match e with
           let newValue = (sub (e1,y,(Rec(y,Fun(x,e1))))) in
             Closure(Fun(x,newValue), controllerFV (newValue,r,emptyenv)) 
   | Fun (x,e1) -> Closure ((Fun(x,e1)), controllerFV (e1,r,emptyenv)) 
-  | Appl (e1,e2) -> (match sem e1 r envType pila with
-                Closure ((Fun(x,f)),d) -> (sem f (bind (d,x,(sem e2 r envType pila))) 
-                                             (bindtyp envType x (typeinf_App e2 envType) ) pila)
-               | _ -> failwith "errore closure")  
-  | Try (e1,i,e2) -> sem e1 r envType ((i,e2)::pila)  
+   | Appl (e1,e2) -> (match sem_App e1 r envType  with
+                Closure ((Fun(x,f)),d) -> (sem_App f (bind (d,x,(sem_App e2 r envType ))) 
+                                             (bindtyp envType x (typeinf_App (expr (sem_App e2 r envType) r) envType) ) )
+ | Try (e1,i,e2) -> sem e1 r envType ((i,e2)::pila)  
   | Raise id -> let (n, s) = controllerTry id pila in sem n r envType s
   |_-> failwith "problema guard per via del rec in sem"     
 
