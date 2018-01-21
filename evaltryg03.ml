@@ -1,6 +1,3 @@
-(************************************************************)
-(*                  ENVIRONMENT/AMBIENTE                    *)
-(************************************************************)
 
 (* "tipo valutazione dell'esprezzione" *)
 
@@ -50,6 +47,7 @@ type etype =
 
 
 
+
 type eval =
   Undefined
 | Int of int
@@ -59,7 +57,7 @@ type eval =
 | Pair of eval * eval
 | Closure of exp * env
 and
- env = Env of (ide -> eval);;
+env = ide -> eval;;
 
 
  
@@ -83,8 +81,8 @@ let newtypenv = ([]:(ide*etype)list);;
 
 (*applica il tipo all'ambiente, restituendo un tipo, vedere specifiche di progetto*)
 let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e with
-    [] -> failwith "typeEnv: ambiente vuoto2"
-   | ((Ide a),(b:etype))::[] -> if a = i then b else  failwith "typeEnv: ambiente vuoto1"    
+    [] -> failwith "empty environment 1"
+   | ((Ide a),(b:etype))::[] -> if a = i then b else  failwith "empty environment 2"
   | ((Ide a),(b:etype))::tl -> if a = i then b else applytypenv tl (Ide i);;
   
 (*associa un tipo e un identificatore all'ambiente dei tipi, vedere specifiche di progeto*)
@@ -140,34 +138,34 @@ let rec  tconst e tr = match e with
       let (l1, c1) =  tconst l  tr in
       let t1 = (match l1 with
           TList [t1]-> t1
-                  |_-> failwith "errore head in inferenza")
+                  |_-> failwith "error head inference")
       in 
       (t1, ([(TList [t1], TList [t1])]@c1)) 
   | Tail l ->
       let (l1,c1) =  tconst l tr in
       let  t1 = (match l1 with                        
                    TList _->  (l1, c1)
-                   |_->failwith "errore tail in inferenza") in
+                   |_->failwith "error tail inference") in
         t1
   |Epair (e1,e2) -> 
      let (t1, c1) = tconst e1 tr in
      let (t2, c2) = tconst e2 tr in
      let c = [(t1, t1); (t2, t2 )] in
        (TPair(t1,t2), c@c1@c2)
-  | Fst e1 ->(
+| Fst e1 ->(
       let (t1,c1) = tconst e1 tr
         in (match t1 with
             (TPair(first,second)) -> 
               (first, ([(TPair(first,second), TPair(first,second))]@ c1))
               | TVar n ->(let a = newvar()  in (a, [TPair(a,newvar()), t1]@c1))
-          | _ -> failwith "non è una coppia"))
+          | _ -> failwith "error fst pair inference"))
   | Snd e1 ->(
       let (t1,c1) = tconst e1 tr
         in (match t1 with
             (TPair(first,second)) -> 
               (second, ([(TPair(first,second), TPair(first,second))]@ c1))
               | TVar n ->(let a = newvar()  in (a, [TPair(a,newvar()),t1]@c1))
-          | _ -> failwith "non è una coppia"))     
+          | _ -> failwith "error snd pair inference"))     
   |Ifthenelse (e0,e1,e2) ->
      let (t0,c0) = tconst e0 tr in
     let (t1,c1) = tconst e1 tr in
@@ -195,9 +193,10 @@ let rec  tconst e tr = match e with
     let (t1,c1) = tconst (Fun(i,e)) (bindtyp tr x tx) in
    (match t1 with
         TFun (a,b) -> (TFun(a,b), ([(TFun(a,b),tx)]@c1))
-      |_->failwith "varie bestemmie quando non funziona")      
+      |_->failwith "error Rec inference")      
 
- |_-> failwith "errore";;
+ |_-> failwith "error the expression is not inferred";;
+
 
 
 (* Funzioni di appoggio per unificare i tipi
@@ -218,7 +217,7 @@ let rec subst_app n o e = match e with
   | TFun (t1,t2) -> TFun (subst_app n o t1 , subst_app n o t2)
   | TPair (t1,t2) ->TPair  (subst_app n o t1 , subst_app n o t2)
   | TList [l] -> TList [subst_app n o l]  
-  |_-> failwith "errore sostituzione";;
+  |_-> failwith "error subst_app";;
   
   
 (*sostituisce un tipo per un identificatore di tipo in una lista di vincoli*)
@@ -236,7 +235,7 @@ let rec occurs name typ = match typ with
   | TList [l] -> (match l with
                       TVar l -> name = l
                     |_->  occurs name l)
-  |_-> failwith " verifica/occurs ";;
+  |_-> failwith "error occurs";;
 
 (*Seconda fase del progetto unisci i vincoli creati da tconst.
 Si da una lista di vincoli
@@ -247,13 +246,14 @@ let rec unify  l = match l with
                                  (TInt,TInt) -> unify tl
                                |(TChar,TChar) -> unify tl               
                                |(TBool,TBool) -> unify tl
-                               | (TVar n1, TVar n2) -> if n1 = n2 then unify tl else unify tl@[(t1,t2)]
+                               | (TVar n1, TVar n2) -> if n1 = n2 then unify tl
+                                 else ((t1, t2)::(unify (subst tl t2 n1)))
                                | (TVar id, _) -> if not (occurs id t2) 
                                  then (t1, t2)::(unify (subst tl t2 id ))
-                                 else failwith "unify tvar 1"
+                                 else failwith "error unify tvar 1"
                                | (_, TVar id) -> if not (occurs id t1) 
                                  then (t1, t2)::(unify (subst tl t1 id))
-                                 else failwith "unify tvar 2"
+                                 else failwith "error unify tvar 2"
                                |(TFun(t3,t4),TFun(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
                                |(TPair(t3,t4),TPair(t33,t44)) -> unify ((t3,t33) :: (t4,t44) :: tl)
                                | (TList [t3], TList [t4]) -> unify ((t3,t4)::tl)
@@ -270,7 +270,7 @@ and
  resolve e u = match u with
     [] -> e
    |(TVar x, t1)::s1  | (t1, TVar x )::s1 -> resolve (typeCheck e x t1) s1        
-   |_-> failwith "non riesco a inferire"
+   |_-> failwith "typeinf: resolve - I can not infer"
 and 
 (*typecheck per la risoluzione dei vincoli, diversa dalla funzione per
  le sostituzioni non modificare assolutamente. Più simile a quello nella pagina del prof
@@ -283,7 +283,7 @@ typeCheck e t1 t2 = match e with
   | TFun (t3,t4) -> TFun (typeCheck t3 t1 t2 , typeCheck t4 t1 t2)
   | TPair(t3,t4) -> TPair (typeCheck t3 t1 t2, typeCheck t4 t1 t2)
   | TList [l] -> TList [typeCheck l t1 t2]
-  | _ -> failwith "Errore type check";;
+  | _ -> failwith "typeinf: typecheck - error typesmatch";;
 
 let rec typeinf_App e env= 
 let (e1,e2) = tconst e env in 
@@ -294,7 +294,7 @@ and
  resolve e u = match u with
     [] -> e
    |(TVar x, t1)::s1  | (t1, TVar x )::s1 -> resolve (typeCheck e x t1) s1        
-   |_-> failwith "non riesco a inferire"
+   |_-> failwith "typeinf: resolve - I can not infer"
 and 
 (*typecheck per la risoluzione dei vincoli, diversa dalla funzione per
  le sostituzioni non modificare assolutamente. Più simile a quello nella pagina del prof
@@ -307,7 +307,7 @@ typeCheck e t1 t2 = match e with
   | TFun (t3,t4) -> TFun (typeCheck t3 t1 t2 , typeCheck t4 t1 t2)
   | TPair(t3,t4) -> TPair (typeCheck t3 t1 t2, typeCheck t4 t1 t2)
   | TList [l] -> TList [typeCheck l t1 t2]
-  | _ -> failwith "Errore type check";;
+  | _ -> failwith "typeinf: typecheck - error typesmatch";;
 
 
 
