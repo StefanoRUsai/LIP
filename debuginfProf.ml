@@ -1,4 +1,4 @@
-#use "typingg03.ml";;
+#use "typingg03_rivista.ml";;
 
 (* Vari tests *)
 let giuste = 
@@ -67,6 +67,13 @@ let giuste =
   
   ];;
 
+let sbagliate = [
+  Eq(Cons(Eint 1,Empty),Cons(True,Empty));
+  Eq(Cons(Eint 2, Empty), Cons(Echar 'c', Empty))];;
+
+
+
+
 (*---------------------------------------------------------------------------
 Test per typeinf
 -------------------------------------------------------------------------------*)
@@ -123,7 +130,7 @@ in if (snd result) then "Tutto OK" else "La "^string_of_int (fst result)^" non s
 testGiusteScoppio giuste;; (* se va tutto bene, le espressioni "giuste" sono tutte inferibili *)
 
 (* NON USARE se non si passa il test anti-scoppio *)
-testGiuste giuste;;  (* verifica se il risultato di typeinf Ë quello atteso *)
+testGiuste giuste;;  (* verifica se il risultato di typeinf ÅË quello atteso *)
 
 testSbagliate sbagliate;; (* verifica che nessuna espressione "sbagliata" venga inferita come giusta *)
 

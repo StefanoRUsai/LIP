@@ -1,9 +1,9 @@
-#use "evalg03.ml";;
+#use "evaltryg03.ml";;
 
 typeinf (Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
      Appl(Appl(Val(Ide "f"),Eint 2),Eint 1)))  ;;
 
-sem (Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
+semtry (Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
      Appl(Appl(Val(Ide "f"),Eint 2),Eint 1))) emptyenv;;
 
 (***andato funziona perfettamente**)
@@ -13,7 +13,7 @@ typeinf (Let(Ide "fact",Rec(Ide "fact", Fun(Ide "x", Ifthenelse(
 	Times(Val(Ide "x"), Appl (Val(Ide "fact"), Diff(Val(Ide "x"), Eint 1)))))),
 	Appl(Val(Ide "fact"),Eint 5)))  ;;
 
-sem  (Let(Ide "fact",Rec(Ide "fact", Fun(Ide "x", Ifthenelse(
+semtry  (Let(Ide "fact",Rec(Ide "fact", Fun(Ide "x", Ifthenelse(
     Eq(Val(Ide "x"), Eint 0), Eint 1,
 	Times(Val(Ide "x"), Appl (Val(Ide "fact"), Diff(Val(Ide "x"), Eint 1)))))),
 	Appl(Val(Ide "fact"),Eint 5))) emptyenv;;
@@ -25,7 +25,7 @@ typeinf (Rec(Ide "fact", Fun(Ide "x", Ifthenelse(
     Eq(Val(Ide "x"), Eint 0), Eint 1,
 	Times(Val(Ide "x"), Appl (Val(Ide "fact"), Diff(Val(Ide "x"), Eint 1))))))) ;;
 
-sem  (Rec(Ide "fact", Fun(Ide "x", Ifthenelse(
+semtry  (Rec(Ide "fact", Fun(Ide "x", Ifthenelse(
     Eq(Val(Ide "x"), Eint 0), Eint 1,
 	Times(Val(Ide "x"), Appl (Val(Ide "fact"), Diff(Val(Ide "x"), Eint 1))))))) emptyenv;;
 
@@ -34,7 +34,7 @@ sem  (Rec(Ide "fact", Fun(Ide "x", Ifthenelse(
 typeinf ((Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
      Appl(Appl(Val(Ide "f"),Eint 3),Echar 'c'))))  ;;
 
-sem  (Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
+semtry  (Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
      Appl(Appl(Val(Ide "f"),Eint 3),Echar 'c'))) emptyenv;;
 
 
@@ -42,39 +42,39 @@ sem  (Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
 
 typeinf (Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))));;
 
-sem  (Fun(Ide "x",Fun(Ide "y",Val(Ide "x")))) emptyenv;;
+semtry  (Fun(Ide "x",Fun(Ide "y",Val(Ide "x")))) emptyenv;;
 
 
 (***Perfetto**)
 
 typeinf (Cons(Empty,Empty)) ;;
 
-sem  (Cons(Empty,Empty)) emptyenv;;
+semtry  (Cons(Empty,Empty)) emptyenv;;
 
 (***perfetto**)
 
 typeinf (Cons(Eint 1, Cons(Eint 2, Empty)));;
 
-sem  (Cons(Eint 1, Cons(Eint 2, Empty))) emptyenv;;
+semtry  (Cons(Eint 1, Cons(Eint 2, Empty))) emptyenv;;
 
 
 (***andata ok**)
 
 typeinf (Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))) ) ;;
 
-sem  (Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))) ) emptyenv;;
+semtry  (Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))) ) emptyenv;;
 
 (***andata ok**)
 
 typeinf (Eq(Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))),False));;
 
-sem  (Eq(Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))),False)) emptyenv;;
+semtry  (Eq(Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))),False)) emptyenv;;
 
 (***andata ok**)
 
 typeinf (Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)));;
 
-sem  (Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False))) emptyenv;;
+semtry  (Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False))) emptyenv;;
 
 
 
@@ -83,20 +83,20 @@ sem  (Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False))) emptyenv;;
 typeinf (Let(Ide "f",Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),Appl(Val(Ide "f"),Cons(Eint 2, Empty)))) ;;
 
 
-sem  (Let(Ide "f",Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),
+semtry  (Let(Ide "f",Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),
              Appl(Val(Ide "f"),Cons(Eint 2, Empty)))) emptyenv;;
 
 (****andata ok*)
 
 typeinf (Cons(Cons(Eint 1,Empty),Empty))  ;;
-sem  (Cons(Cons(Eint 1,Empty),Empty)) emptyenv;;
+semtry  (Cons(Cons(Eint 1,Empty),Empty)) emptyenv;;
 
 
 
 (***andata ok**)
 
 typeinf (Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),Cons(Cons(Eint 1,Empty),Empty))) ;;
-sem (Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),Cons(Cons(Eint 1,Empty),Empty))) emptyenv;;
+semtry (Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),Cons(Cons(Eint 1,Empty),Empty))) emptyenv;;
 
 (*andata ok***)
 
@@ -106,7 +106,7 @@ typeinf (Appl(
        Snd(Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),
                                      Cons(Cons(Eint 1,Empty),Empty)))))  ;;
 
-sem  (Appl(
+semtry  (Appl(
    Fst(Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),
                                      Cons(Cons(Eint 1,Empty),Empty))),
        Snd(Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),
@@ -118,7 +118,7 @@ sem  (Appl(
 
 typeinf  (Let(Ide "p",Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),Cons(Cons(Eint 1,Empty),Empty)),Appl(Fst(Val(Ide "p")),Snd(Val(Ide "p")))));;
 
-sem (Let(Ide "p",Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),Cons(Cons(Eint 1,Empty),Empty)),Appl(Fst(Val(Ide "p")),Snd(Val(Ide "p")))))
+semtry (Let(Ide "p",Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False)),Cons(Cons(Eint 1,Empty),Empty)),Appl(Fst(Val(Ide "p")),Snd(Val(Ide "p")))))
  emptyenv;;
 
 
@@ -128,7 +128,7 @@ sem (Let(Ide "p",Epair(Fun(Ide "x", Ifthenelse(Eq(Val(Ide "x"),Empty),True,False
 
 typeinf (Cons(Eint 1,Cons(True, Empty)));;
 
-sem (Cons(Eint 1,Cons(True, Empty))) emptyenv;;
+semtry (Cons(Eint 1,Cons(True, Empty))) emptyenv;;
 
 
 
@@ -136,7 +136,7 @@ sem (Cons(Eint 1,Cons(True, Empty))) emptyenv;;
 
 typeinf (Eq(Cons(Eint 1,Empty),Cons(True,Empty)))  ;;
 
-sem (Eq(Cons(Eint 1,Empty),Cons(True,Empty))) emptyenv;;
+semtry (Eq(Cons(Eint 1,Empty),Cons(True,Empty))) emptyenv;;
 
 
 
@@ -146,7 +146,7 @@ typeinf (Let(Ide "f",Rec(Ide "f",Fun(Ide "x",Ifthenelse(Eq(Val(Ide "x"),Eint 0),
             Cons(Val(Ide "x"),Appl(Val(Ide "f"),Diff(Val(Ide "x"),Eint 1)))))),
             Appl(Val(Ide "f"),Eint 5)))  ;;
 
-sem (Let(Ide "f",Rec(Ide "f",Fun(Ide "x",Ifthenelse(Eq(Val(Ide "x"),Eint 0),Empty,
+semtry (Let(Ide "f",Rec(Ide "f",Fun(Ide "x",Ifthenelse(Eq(Val(Ide "x"),Eint 0),Empty,
             Cons(Val(Ide "x"),Appl(Val(Ide "f"),Diff(Val(Ide "x"),Eint 1)))))),
             Appl(Val(Ide "f"),Eint 5))
 ) emptyenv;;
