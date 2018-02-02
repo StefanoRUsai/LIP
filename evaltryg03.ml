@@ -1,42 +1,46 @@
+(*Progetto Gruppo con identificativo g03
+Giorgia Campanile 65140
+Marta Pibiri 65228
+Stefano Raimondo Usai 65196
+*)
 
-(* "tipo valutazione dell'esprezzione" *)
 
-(* Progetto gruppo con identificativo g03*)
-(*Tipi exp, espressioni di dati astratti  eterogeni*)
-
+(*Insieme tipo identificatore*)
 type ide = Ide of string;;
 
+
+(*Insieme tipi exp, espressioni di dati astratti eterogeni*)
 type exp =
-  Val of ide                     (*Valore *)
-| Eint of int                    (*espressione intero*)
-| Echar of char                  (*espressione carattere*)
-| True                           (*Bool vero*)
-| False                          (*Bool falso*)
-| Empty                          (*lista vuota*)
-| Sum of exp * exp               (* somma, appartiene agli operatori*)
-| Diff of exp * exp              (* differenza, appartiene agli operatori*)
-| Times of exp * exp             (* moltiplicazione, appartiene agli operatori*)
-| And of exp * exp               (* operatore logico dell'and *)
-| Or of exp * exp                (* operatore logico dell'or*)
-| Not of exp                     (* negazione logica*)
-| Eq of exp * exp                (*equivalenza*)
-| Less of exp * exp              (*operatore logico minore*)
-| Cons of exp * exp              (*costruttore della lista ::*)
-| Head of exp                    (*testa di una lista*)
-| Tail of exp                    (*Coda di una lista*)
-| Fst of exp                     (* Primo elemento di una coppia*)
-| Snd of exp                     (* secondo elemento di una coppia*)
-| Epair of exp * exp              (*coppia *)
-| Ifthenelse of exp * exp * exp  (*condizione?*)
-| Let of ide * exp * exp         (*Inizio delimitatore Blocco?*)
-| Fun of ide * exp               (*funzione*)
-| Appl of exp * exp              (*applicazione*)
-| Rec of ide * exp               (* funzione ricorsiva*)
-| Try of exp * ide * exp         (*serve a dichiarare l'eccezione*)   
-| Raise of ide                   (*raccoglie l'eccezione*)
+  Val of ide                     (*identificatore di variabile*)
+| Eint of int                    (*tipo espressione intero*)
+| Echar of char                  (*tipo espressione carattere*)
+| True                           (*tipo Bool vero*)
+| False                          (*tipo Bool falso*)
+| Empty                          (*tipo espressione lista vuota*)
+| Sum of exp * exp               (*parola identificatrice di somma, appartiene all'insieme degli operatori*)
+| Diff of exp * exp              (*parola identificatrice di differenza, appartiene all'insieme degli operatori*)
+| Times of exp * exp             (*parola identificatrice di moltiplicazione, appartiene all'insieme degli operatori*)
+| And of exp * exp               (*parola identificatrice per operatore logico dell'AND *)
+| Or of exp * exp                (*parola identificatrice per operatore logico dell'OR *)
+| Not of exp                     (*parola identificatrice per operatore logico del NOT *)
+| Eq of exp * exp                (*parola identificatrice per operatore logico dell' equivalenza*)
+| Less of exp * exp              (*parola identificatrice per operatore di confronto del minore (<)*)
+| Cons of exp * exp              (*parola identificatrice del costruttore della lista (::)*)
+| Head of exp                    (*parola identificatrice della testa di una lista*)
+| Tail of exp                    (*parola identificatrice della coda di una lista*)
+| Fst of exp                     (*parola identificatrice del primo elemento di una coppia*)
+| Snd of exp                     (*parola identificatrice del secondo elemento di una coppia*)
+| Epair of exp * exp             (*parola identificatrice di una coppia*)
+| Ifthenelse of exp * exp * exp  (*parola identificatrice del costrutto "if then else"*)
+| Let of ide * exp * exp         (*parola identificatrice del delimitatore di blocco indicante l'inizio*)
+| Fun of ide * exp               (*parola identificatrice di una funzione*)
+| Appl of exp * exp              (*parola identificatrice utilizzata da una funzione per poter associare un valore ad un identificatore*)
+| Rec of ide * exp               (*parola identificatrice che permette ad una funzione di essere ricorsiva*)
+| Try of exp * ide * exp         (*parola identificatrice che serve a dichiarare l'eccezione*)   
+| Raise of ide                   (*parola identificatrice che serve a raccogliere l'eccezione*)
 ;;
 
-(*tipi per l'inferenza*)
+(*Insieme dei tipi exp*)
 type etype =
   TBool
 | TInt
@@ -46,7 +50,7 @@ type etype =
 | TList of etype list
 | TFun of etype * etype;;
 
-(*tipi per la valutazione*)
+(*Insieme dei tipi eval*)
 type eval =
   Undefined
 | Int of int
@@ -58,187 +62,166 @@ type eval =
 and env = ide -> eval;;
 
 
- 
+
+(*Nomi delle eccezioni*)
 exception UndefinedIde of ide;;
 exception TypeMismatch ;;
 
 
-(* USARE I PUNTATORI IN OCAML*)
-(* puntatore per nuova variabile con reference?*)
-
-(* queste 2 funzioni creano ununa nuova variabile, secondo specifiche di progetto*)
-
+(*Le due funzioni servono a creare una referenza per ogni nuova variabile non tipata creata*)
 let nextsym = ref (-1);;
 let newvar = fun () -> nextsym := !nextsym + 1 ;
   TVar ("?T" ^ string_of_int (!nextsym));;
 
 
-
-
-
-(* FUNZIONI PER L?AMBIENTE DEI TIPI*)
-(*crea l'ambiente dei tipi vuoto, vedere specifiche del progetto*)
+(*FUNZIONI PER L'AMBIENTE DEI TIPI*)
+(*Crea l'ambiente dei tipi vuoto*)
 let newtypenv = ([]:(ide*etype)list);;
 
 
-(*applica il tipo all'ambiente, restituendo un tipo, vedere specifiche di progetto*)
+(*La funzione applica il tipo all'ambiente, restituendo un ambiente con il tipo relativo*)
 let rec applytypenv (e:(ide*etype)list) (Ide i) =  match e with
-    [] -> failwith "applytypenv: empty environment 1"
-   | ((Ide a),(b:etype))::[] -> if a = i then b else  failwith "applytypenv: empty environment 2"
+    [] -> failwith "empty environment 1"
+   | ((Ide a),(b:etype))::[] -> if a = i then b else  failwith "empty environment 2"
   | ((Ide a),(b:etype))::tl -> if a = i then b else applytypenv tl (Ide i);;
   
-(*associa un tipo e un identificatore all'ambiente dei tipi, vedere specifiche di progeto*)
+
+(*La funzione associa un tipo e un identificatore all'ambiente dei tipi*)
 let rec bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =match e with
     []-> (i,t)::[]
     |(i1,t1)::[] -> if i=i1 then (i1,t)::[] else (i,t)::(i1,t1)::[]      
     |(i1,t1)::tl -> if i=i1 then (i1,t)::tl else (i1,t1)::(bindtyp tl i t) ;; 
 
       
-(* funzioni di ambiente per l'interprete*)
+(*Le funzioni di ambiente per l'interprete sem, come da specifica del progetto*)
 let rec emptyenv =  (fun (x:ide) -> Undefined)
 and applyenv ((r:env),(x:ide)) = r x
-and bind (r, x, d) =  (fun y -> if y=x then d else applyenv (r,y));;
+and bind (r, x, e) =  (fun y -> if y=x then e else applyenv (r,y));;
 
 
-
-
-
-(*funzione di appoggio per far tornare da un eval un exp*)
+(*Una funzione di appoggio per trasformare un eval in un exp*)
 let rec expr e envE =
   match e with
-      Undefined -> failwith "l'eval �� di tipo undefined"
+      Undefined -> failwith "l'eval � di tipo undefined"
     | Int x -> Eint x
     | Bool b -> if b then True else False
     | Char c -> Echar c
     | List [] -> Empty
     | List (hd::tl) -> Cons(expr hd envE, expr (List tl) envE)
     | Pair(sx,dx) -> Epair(expr sx envE, expr dx envE)
-    | _ -> failwith "expr: errore nel ritorno dell'espressione";;
+    | _ -> failwith "errore nel ritorno dell'espressione";;
 
-(*vincoli di tipaggio, ci si prova*)
-(*Questa è la  costruzione di un insieme di vincoli per i tipi.
-Il primo argomento è l'espressione da analizzare,  secondo argomento è un ambiente di tipi,
-con tipo (ide * etype) list. Il risultato è un valore di tipo etype * (etype * etype) list,
-in cui il primo elemento è il tipo di espressione e il secondo elemento è l'elenco di vincoli.
-Secondo le specifiche di progetto si interpretano le regole sull'inferenza di tipo*)
 
-(*INFERENZA DI TIPO*)
-(**** prova typing semantica *)
-let rec tconstraintssem e enveremont enveremontsem=  match e with 
-    Val e1 -> let (ide, const) = 
-      try (true, (applytypenv enveremont e1, [])) 
+(*INFERENZA DI TIPO A SUPPORTO DI SEM*)
+let rec tconstraintssem e environment environmentsem=  match e with 
+    Val e1 -> (let (ide, const) = 
+      try (true, (applytypenv environment e1, [])) 
       with _ -> (false, (TVar "", []))
-    in if ide then const  else (match applyenv(enveremontsem ,e1) with
+    in if ide then const  else (match applyenv(environmentsem ,e1) with
                                     Closure(foo, env1) ->(match foo with
                                                               Fun(x,t) -> tconstraintssem  foo newtypenv env1
                                                             | _ -> failwith "getConstraints:Val:Closure - Chiusura non valida")
-                                  | _ ->  tconstraintssem  (expr (applyenv(enveremontsem,e1)) enveremontsem) enveremont enveremontsem)
+                                  | _ ->  tconstraintssem  (expr (applyenv(environmentsem, e1)) environmentsem) environment environmentsem))
   | Eint e1 -> (TInt, [])
   | Echar e1 -> (TChar,[])
   | True | False -> (TBool, [])
   | Empty -> (TList [newvar()], [])        
   | Sum   (e1,e2)| Diff  (e1,e2) | Times (e1,e2) ->
-      let (t1,c1) = tconstraintssem  e1 enveremont enveremontsem in
-      let (t2,c2) = tconstraintssem  e2 enveremont enveremontsem in
+      let (t1,c1) = tconstraintssem  e1 environment environmentsem in
+      let (t2,c2) = tconstraintssem  e2 environment environmentsem in
       let c = [(t1,TInt); (t2,TInt)] in
         (TInt, c @ c1 @ c2)
   |And (e1,e2)|Or (e1,e2) -> 
-      let (t1,c1) = tconstraintssem  e1 enveremont enveremontsem in
-      let (t2,c2) = tconstraintssem  e2 enveremont enveremontsem in
+      let (t1,c1) = tconstraintssem  e1 environment environmentsem in
+      let (t2,c2) = tconstraintssem  e2 environment environmentsem in
       let c = [(t1,TBool);(t2,TBool)] in
         (TBool, c @ c1 @ c2)
   |Not e1 ->
-     let (t1,c1) = tconstraintssem  e1 enveremont enveremontsem in
+     let (t1,c1) = tconstraintssem  e1 environment environmentsem in
        (TBool, [(t1,TBool)]@c1)
   | Eq (e1,e2)->      
-      let (t1,c1) = tconstraintssem  e1 enveremont enveremontsem in
-      let (t2,c2) = tconstraintssem  e2 enveremont enveremontsem in
+      let (t1,c1) = tconstraintssem  e1 environment environmentsem in
+      let (t2,c2) = tconstraintssem  e2 environment environmentsem in
       let c = [(t1,t2);(t1,t1);(t2,t2)]  in
         (TBool, c @ c1 @ c2)
   |Less (e1,e2) ->
-     let (t1,c1) = tconstraintssem  e1 enveremont enveremontsem in
-     let (t2,c2) = tconstraintssem  e2 enveremont enveremontsem in
+     let (t1,c1) = tconstraintssem  e1 environment environmentsem in
+     let (t2,c2) = tconstraintssem  e2 environment environmentsem in
      let c = [(t1,TInt); (t2,TInt)] in
        (TBool, c @ c1 @ c2)
   | Cons(e1,e2) ->
-      let (t1,c1)= tconstraintssem  e1 enveremont enveremontsem in
-      let (t2,c2) = tconstraintssem  e2 enveremont enveremontsem in 
+      let (t1,c1) = tconstraintssem  e1 environment environmentsem in
+      let (t2,c2) = tconstraintssem  e2 environment environmentsem in 
       let c =  [(t1,t1);(t2, TList [t1])] in
         (TList [t1], (c@c1@c2)) 
   | Head l -> 
       let a = newvar() in
-      let (t1,c1) =tconstraintssem  l enveremont enveremontsem in
+      let (t1,c1) =tconstraintssem  l environment environmentsem in
         (match t1 with
              (TList [l1]) -> (l1, ([(t1, TList [l1])]@c1))
            | TVar n -> (a, ([(TList [a], t1)]@c1))
            | _ -> failwith "tconstraints: error head inference")             
   | Tail l ->
       let a = newvar() in
-      let (t1,c1) = tconstraintssem  l enveremont enveremontsem
+      let (t1,c1) = tconstraintssem  l environment environmentsem
       in (match t1 with
               TList [l1] -> (t1, (c1))
             | TVar n ->  (TList[t1], ([TList[a],t1]@c1))
             | _ -> failwith "tconstraints: error tail inference")                       
   |Epair (e1,e2) -> (*da rivedere se non funziona*)
-     let (t1, c1) = tconstraintssem  e1 enveremont enveremontsem in
-     let (t2, c2) = tconstraintssem  e2 enveremont enveremontsem in
+     let (t1, c1) = tconstraintssem  e1 environment environmentsem in
+     let (t2, c2) = tconstraintssem  e2 environment environmentsem in
      let c = [(t1, t1); (t2, t2 )] in
        (TPair(t1,t2), c@c1@c2)         
   | Fst e ->
       let a = newvar() in
-      let (t1,c1) = tconstraintssem  e enveremont enveremontsem
+      let (t1,c1) = tconstraintssem  e environment environmentsem
       in (match t1 with
               TPair(f,s) -> (f, ([t1, TPair(f,s)]@c1))
             | TVar n -> (a, [t1, TPair(a,newvar())]@c1)
             | _ -> failwith "tconstraints: error fst pair inference")           
   | Snd e ->
       let a = newvar() in
-      let (t1, c1) = tconstraintssem  e enveremont enveremontsem
+      let (t1, c1) = tconstraintssem  e environment environmentsem
       in (match t1 with
               TPair(f,s) -> (s, ([(t1, TPair(f,s))]@c1))
             | TVar n ->  (a, [t1, TPair(newvar(),a)]@c1)
             | _ -> failwith "tconstraints: error snd pair inference")               
   |Ifthenelse (e0,e1,e2) -> 
-     let (t0,c0) = tconstraintssem  e0 enveremont enveremontsem in
-     let (t1,c1) = tconstraintssem  e1 enveremont enveremontsem in
-     let (t2,c2) = tconstraintssem  e2 enveremont enveremontsem in
+     let (t0,c0) = tconstraintssem  e0 environment environmentsem in
+     let (t1,c1) = tconstraintssem  e1 environment environmentsem in
+     let (t2,c2) = tconstraintssem  e2 environment environmentsem in
      let c = [(t0,TBool); (t1,t2)] in
        (t1, c @ c0 @ c1 @ c2)              
   | Let (x,e1,e2) -> let a = newvar() in
-    let (t1,c1) = tconstraintssem  e1 enveremont enveremontsem in
-    let (t2,c2) = tconstraintssem  e2 (bindtyp enveremont x a) enveremontsem in
+    let (t1,c1) = tconstraintssem  e1 environment environmentsem in
+    let (t2,c2) = tconstraintssem  e2 (bindtyp environment x a) environmentsem in
       (t2, ([(t1, a)]@c1@c2))        
   | Fun(x,t) ->
       let a = newvar() in
-      let (t1, c1) = tconstraintssem  t (bindtyp enveremont x a) enveremontsem
+      let (t1, c1) = tconstraintssem  t (bindtyp environment x a) environmentsem
       in (TFun(a,t1),c1)             
   | Appl(e1,e2) ->
       let a = newvar()
-      in let (t1, c1) = tconstraintssem  e1 enveremont enveremontsem
-      in let (t2, c2) = tconstraintssem  e2 enveremont enveremontsem
+      in let (t1, c1) = tconstraintssem  e1 environment environmentsem
+      in let (t2, c2) = tconstraintssem  e2 environment environmentsem
       in (a, ([t1, TFun(t2,a)]@c1@c2))           
   | Rec(y,f) -> let a = newvar() in
       (match f with
-           Fun(x,t) -> let (t1, c1) =  tconstraintssem  f (bindtyp enveremont y a) enveremontsem
+           Fun(x,t) -> let (t1, c1) =  tconstraintssem  f (bindtyp environment y a) environmentsem
            in (t1, ([a,a]@c1))
          | _ -> failwith "tconstraints: error Rec inference")
   | Try(e1,n,e2) -> 
-      let (t2, c2) = tconstraintssem e2 enveremont enveremontsem
-      in let (t1, c1) = tconstraintssem e1 (bindtyp enveremont n t2) enveremontsem
+      let (t2, c2) = tconstraintssem e2 environment environmentsem
+      in let (t1, c1) = tconstraintssem e1 (bindtyp environment n t2) environmentsem
       in (t2, [t1, t2]@[])
-  | Raise e1 ->(applytypenv enveremont e1, []);;
+  | Raise e1 ->(applytypenv environment e1, []);;
 
 
-(* Funzioni di appoggio per unificare i tipi
-subst_app
-subst
-occurs*)
 
-
-(*  sostituisce un tipo per un identificatore di tipo in un tipo. *)
-(* vecchio tipo, nuovo tipo, etype. Questa funzione evita il loop recursion
-nella sostituzione dei vincoli. Specialmente nelle liste. Diverso dal typecheck
-usato per il resolve*)
+(*SECONDA PARTE DELL'INFERENZA*)
+(*Funzioni di appoggio per risolvere l'insieme dei vincoli: subst_app, subst e occurs*)
+(*Applica la sostituzione dell'identificatore di un tipo con l'identificatore corretto*)
 let rec subst_app n o e = match e with
     TInt | TChar | TBool -> e
   | TVar y -> if y=o then n else TVar y
@@ -248,12 +231,12 @@ let rec subst_app n o e = match e with
   |_-> failwith "subst_app: error ";;
   
   
-(*sostituisce un tipo per un identificatore di tipo in una lista di vincoli*)
-(*lista vincoli, nuovo tipo, vecchio tipo*)
+(*Sostituisce un tipo per un identificatore di tipo in una lista di vincoli*)
+(*l->Lista vincoli, n-> nuovo tipo, o-> vecchio tipo*)
 let rec subst l n o = List.fold_right (fun (a,b) c -> (subst_app n o a, subst_app n o b)::c) l [];;  
 
-(*   dice se il nome di un tipo �� verificato *)
 
+(*Verifica il nome di un tipo *)
 let rec occurs name typ = match typ with
     TInt | TBool |TChar -> false
   | TVar n1 -> n1=name
@@ -262,10 +245,8 @@ let rec occurs name typ = match typ with
   | TList [l] ->   occurs name l
   |_-> failwith "occurs: error check";;
 
-(*Seconda fase del progetto unisci i vincoli creati da tconst.
-Si da una lista di vincoli
- Il risultato, di tipo (etype * etype) list.*)
 
+(*Funzione che unisce le coppie dei vincoli*)
 let rec unify constrs = match constrs with
     [] -> []
   | (t1,t2)::tl  -> match t1, t2 with
@@ -277,26 +258,23 @@ let rec unify constrs = match constrs with
           else failwith "unify: error occurs 1"
       | _, TVar id ->   if not (occurs id t1) 
           then (t2, t1)::unify (subst tl t1 id )
-          else failwith "unify: error occurs 1"
+          else failwith "unify: error occurs 2"
       | TFun(a,b), TFun(c,d) | (TPair(a,b),TPair(c,d)) -> unify ((a,c)::(b,d)::tl)
       | TList [l1], TList [l2] -> unify ((l1,l2)::tl)
       | _ ->(t1,t2)::tl ;;
 
 
+(*FUNZIONE DI SUPPORTO TYPEINF PER SEM*)
 let rec typeinf_App e env envsem= 
 let (e1,e2) = tconstraintssem  e env envsem in 
 let u =  unify e2 in 
 if u = [] then e1 else resolve e1 u 
 and
-(* risolve i vincoli dell'espressione con l'ambiente *)
  resolve e u = match u with
     [] -> e
    |(TVar x, t1)::s1 -> resolve (typeCheck e x t1) s1        
    |_-> failwith "typeinf_App: resolve - I can not infer"
 and 
-(*typecheck per la risoluzione dei vincoli, diversa dalla funzione per
- le sostituzioni non modificare assolutamente. Pi�� simile a quello nella pagina del prof
-*)
 typeCheck e t1 t2 = match e with
     TInt -> TInt
   | TBool -> TBool
@@ -308,10 +286,7 @@ typeCheck e t1 t2 = match e with
   | _ -> failwith "typeinf_App: typecheck - error typesmatch";;
 
 
-
-(* serve per controllare il tipo delle coppie 
-nell'eq dell'interprete, da rivedere e controllare !!!!!!!!!!*)
-
+(*Funzione di supporto per Eq in Sem*)
 let rec typeCheckEq (a,b) = match a,b with
       Undefined, Undefined -> true
   | Int _,Int _ -> true 
@@ -319,9 +294,10 @@ let rec typeCheckEq (a,b) = match a,b with
   | Char _, Char _ -> true
   | List _, List _ -> true
   | Pair ((_ as a),(_ as b)), Pair ((_ as c),( _ as d) ) ->  typeCheckEq(a,c)&&typeCheckEq(b,d)
-  |_-> failwith "non sono uguali, inutile che ci tenti";;
+  |_-> failwith "typeCheckEq: error typesmatch";;
 
 
+(*La funzione � volta al controllo dei tipi inferiti all'interno della funzione Sem*)
 let rec typeCheckInf (a,b) = match a,b with   
       TInt, TInt  ->true
     | TBool, TBool -> true
@@ -333,16 +309,8 @@ let rec typeCheckInf (a,b) = match a,b with
     | _ -> failwith "typeCheckInf: error typesmatch";;
 
 
+(*Pila delle eccezioni*)
 let newstack = ([]:(ide*exp)list);;
-
-
-
-
-(* le funzioni che iniziano per eval sono un typecheck 
-per l'interprete, per restituire un 
-dato primivito della macchina ospite*)
-
-
 
 let rec evalInt e r envType pila= match (sem_App e r envType pila ) with
   Int n -> n
@@ -382,7 +350,6 @@ and controllerFV (e,d1,d2) = match e with
 
 (*ricorsione vedere pagina 4 prima delle regole della semantica *)
 (* espressione che produce, vecchio ambiente, nuovo ambiente*)
-
 and sub (e,oldV,newV)  = match e with
     Val i -> if i = oldV then newV else Val i
   | True | False | Empty -> e
@@ -409,8 +376,6 @@ and sub (e,oldV,newV)  = match e with
   | _ -> failwith "Errore nella sostituzione Rec, manca il match completo?"
 
 (*Interprete, del progetto con ambiente di inferenza collegato. Appoggio alla funzione sem*)
-
-
 and  sem_App e r envType pila = match e with
    Eint n -> Int n
   | Echar c -> Char c  
@@ -429,9 +394,9 @@ and  sem_App e r envType pila = match e with
                      | List [], List [b] -> Bool false
                      | List a, List b -> if a = b then Bool true else if
                         typeCheckInf  ((typeinf_App e1 envType r  ),(typeinf_App e2 envType r)) then Bool (a=b)
-                       else failwith "le liste non sono dello stesso tipo"   
+                       else failwith "semApp: error Eq list type"   
                      | Pair(a,b), Pair (c,d) -> if  (typeCheckEq (a,c) &&  typeCheckEq (b,d))
-                       then  Bool (a=c&&b=d) else failwith "le coppie non sono dello stesso tipo"
+                       then  Bool (a=c&&b=d) else failwith "semApp: error Eq Pair type"
                      | Closure(a,b), Closure (c,d) -> failwith "equal: fail"
                      |Undefined, Undefined -> Bool (Undefined=Undefined)
                      |_-> raise TypeMismatch) 
@@ -442,21 +407,21 @@ and  sem_App e r envType pila = match e with
   | Empty -> List []  
   | Head e1 -> (let a = sem_App e1 r envType pila in 
                let b = (match a with
-                        List [] -> failwith "Lista vuota" 
+                        List [] -> failwith "semApp: empty list" 
                       | List (hd::tl) -> hd  
                       | _ -> raise TypeMismatch)         
                in b )  
   |Tail e1 -> (let a = sem_App e1 r envType pila in 
                let b = (match a with
-                           List [] -> failwith "Lista vuota" 
+                           List [] -> failwith "semApp: empty list" 
                          | List (hd::tl) -> tl  
                      | _ -> raise TypeMismatch)         
               in List b )
   | Cons(e1,e2) -> (let lista = ( match sem_App e2 r envType pila with
                            (List l) -> List (sem_App e1 r envType pila::l)
-                         |_ -> failwith "Espressione non valida in Cons")
+                         |_ -> failwith "semApp: typesmatch in Cons")
           in let  (e3,e4)= try (true, typeinf_App e envType r) with _ -> (false, TVar "")
-          in if e3 then lista else failwith "Type error in Cons"  )
+          in if e3 then lista else failwith "semApp: typesmatch in Cons"  )
   |Epair (e1,e2) -> Pair ( sem_App e1 r envType pila, sem_App e2 r envType pila) 
   |Fst e -> ( match (sem_App e r envType pila) with
                   Pair (a, b) -> a
@@ -475,18 +440,17 @@ and  sem_App e r envType pila = match e with
                          Closure ((Fun(x,f)),d) -> 
                            (sem_App f (bind (d,x,(sem_App e2 r envType pila ))) 
                               (bindtyp envType x (typeinf_App e2 envType r ) ) pila )
-                       | _ -> failwith "errore closure")  
+                       | _ -> failwith "semApp: typesmatch in Closure")  
   | Try(e1,i,e2) -> sem_App e1 r (bindtyp envType i (typeinf_App e2 envType r)) ((i,e2)::pila)
   | Raise id -> let (n, s) = controllerTry id pila in sem_App n r envType s
-  |_-> failwith "problema guard per via del rec in sem" 
+  |_-> failwith "semApp: error typesmatch in guard" 
 
    
 and controllerTry n s = match s with
-    [] -> failwith "Eccezione non presente nello stack"
+    [] -> failwith "controllerTry: Empty stack exception"
   | (a,b)::tl -> if a = n then (b,tl) else controllerTry n tl;;
 
 
 
 (*interprete principale del progetto*)
 let rec semtry e r= sem_App e r newtypenv newstack;;
-
