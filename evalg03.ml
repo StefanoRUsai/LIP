@@ -96,7 +96,7 @@ let rec bindtyp (e:(ide*etype)list) (i:ide) (t:etype) =match e with
 (*Le funzioni di ambiente per l'interprete sem, come da specifica del progetto*)
 let rec emptyenv =  (fun (x:ide) -> Undefined)
 and applyenv ((r:env),(x:ide)) = r x
-and bind (r, x, e) =  (fun y -> if y=x then e else applyenv (r,y));;
+and bind (r, x, e) = ( (fun y -> if y=x then e else applyenv (r,y)):env);;
 
 
 (*Una funzione di appoggio per trasformare un eval in un exp*)
