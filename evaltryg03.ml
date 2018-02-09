@@ -102,7 +102,7 @@ and bind (r, x, e) =  ((fun y -> if y=x then e else applyenv (r,y)):env);;
 (*Una funzione di appoggio per trasformare un eval in un exp*)
 let rec expr e envE =
   match e with
-      Undefined -> failwith "l'eval è di tipo undefined"
+      Undefined -> failwith "l'eval ï¿½ di tipo undefined"
     | Int x -> Eint x
     | Bool b -> if b then True else False
     | Char c -> Echar c
@@ -120,7 +120,7 @@ let rec tconstraintssem e environment environmentsem=  match e with
     in if ide then const  else (match applyenv(environmentsem ,e1) with
                                     Closure(foo, env1) ->(match foo with
                                                               Fun(x,t) -> tconstraintssem  foo newtypenv env1
-                                                            | _ -> failwith "getConstraints:Val:Closure - Chiusura non valida")
+                                                            | _ -> failwith "tconstraints: error Val")
                                   | _ ->  tconstraintssem  (expr (applyenv(environmentsem, e1)) environmentsem) environment environmentsem))
   | Eint e1 -> (TInt, [])
   | Echar e1 -> (TChar,[])
@@ -297,7 +297,7 @@ let rec typeCheckEq (a,b) = match a,b with
   |_-> failwith "typeCheckEq: error typesmatch";;
 
 
-(*La funzione è volta al controllo dei tipi inferiti all'interno della funzione Sem*)
+(*La funzione ï¿½ volta al controllo dei tipi inferiti all'interno della funzione Sem*)
 let rec typeCheckInf (a,b) = match a,b with   
       TInt, TInt  ->true
     | TBool, TBool -> true

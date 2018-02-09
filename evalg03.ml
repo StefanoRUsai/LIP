@@ -102,7 +102,7 @@ and bind (r, x, e) = ( (fun y -> if y=x then e else applyenv (r,y)):env);;
 (*Una funzione di appoggio per trasformare un eval in un exp*)
 let rec expr e envE =
   match e with
-      Undefined -> failwith "l'eval è di tipo undefined"
+      Undefined -> failwith "l'eval ï¿½ï¿½ di tipo undefined"
     | Int x -> Eint x
     | Bool b -> if b then True else False
     | Char c -> Echar c
@@ -122,7 +122,7 @@ let rec tconstraintssem e enveremont enveremontsem=  match e with
              Closure(foo, env1) ->
                (match foo with
                     Fun(x,t) -> tconstraintssem  foo newtypenv env1
-                  | _ -> failwith "getConstraints:Val:Closure - Chiusura non valida")
+                  | _ -> failwith "tconstraints: error Val")
            | _ ->  tconstraintssem  (expr (applyenv(enveremontsem,e1)) enveremontsem) enveremont enveremontsem)
   | Eint e1 -> (TInt, [])
   | Echar e1 -> (TChar,[])
@@ -293,7 +293,7 @@ let rec typeCheckEq (a,b) = match a,b with
   |_-> failwith "typeCheckEq: error typesmatch";;
 
 
-(*La funzione è volta al controllo dei tipi inferiti all'interno della funzione Sem*)
+(*La funzione ï¿½ï¿½ volta al controllo dei tipi inferiti all'interno della funzione Sem*)
 let rec typeCheckInf (a,b) = match a,b with   
       TInt, TInt  ->true
     | TBool, TBool -> true
@@ -320,7 +320,7 @@ and evalChar e r envType = match sem_App e r envType  with
 | _ -> raise TypeMismatch
 
 
-(*La funzione controllerFV è volta a valutare un termine t in un ambiente e restituisce un valore all'insieme V, secondo specifiche di progetto*)
+(*La funzione controllerFV ï¿½ï¿½ volta a valutare un termine t in un ambiente e restituisce un valore all'insieme V, secondo specifiche di progetto*)
 and controllerFV (e,d1,d2) = match e with
     Val v -> bind (d2, v, applyenv (d1,v)) 
   |Eint e1 -> d2
@@ -337,7 +337,7 @@ and controllerFV (e,d1,d2) = match e with
   |_->failwith "controllo sul rec, manca il match completo"
 
 
-(*La funzione sub è volta alla sostituzione di ogni occorrenza di una variabile Undefined in nel termine t non tipato con un termine tipato*)
+(*La funzione sub ï¿½ï¿½ volta alla sostituzione di ogni occorrenza di una variabile Undefined in nel termine t non tipato con un termine tipato*)
 and sub (e,oldV,newV)  = match e with
     Val i -> if i = oldV then newV else Val i
   | True | False | Empty -> e
